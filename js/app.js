@@ -526,8 +526,12 @@
                     inp.focus({ preventScroll: true });
                     const len = inp.value.length;
                     inp.setSelectionRange(len, len);
-                    // 부드럽게 보이는 영역으로만 스크롤
-                    inp.scrollIntoView({ block: 'nearest', behavior: 'instant' });
+                    // 화면 밖에 있을 때만 최소한의 스크롤
+                    const rect = inp.getBoundingClientRect();
+                    const vh = window.innerHeight;
+                    if (rect.top < 0 || rect.bottom > vh) {
+                        inp.scrollIntoView({ block: 'nearest', behavior: 'instant' });
+                    }
                 }
                 focusTargetId = null;
             } else if (focusNewRow) {
