@@ -876,14 +876,10 @@
         e.preventDefault();
         e.dataTransfer.dropEffect = 'move';
         if (this.dataset.id === draggedId) return;
-        const rect = this.getBoundingClientRect(), y = e.clientY - rect.top, h = rect.height, th = h / 3;
+        const rect = this.getBoundingClientRect(), y = e.clientY - rect.top, h = rect.height;
         this.classList.remove('drag-over-above', 'drag-over-child', 'drag-over-below');
-        if (y < th) this.classList.add('drag-over-above');
-        else if (y > h - th) this.classList.add('drag-over-below');
-        else {
-            const d = parseInt(this.dataset.depth) || 0;
-            this.classList.add(d === 0 ? 'drag-over-child' : 'drag-over-below');
-        }
+        if (y < h * 0.5) this.classList.add('drag-over-above');
+        else this.classList.add('drag-over-below');
     }
 
     function handleDragEnter(e) { e.preventDefault(); }
@@ -896,19 +892,15 @@
             this.classList.remove('drag-over', 'drag-over-child', 'drag-over-above', 'drag-over-below');
             return;
         }
-        const rect = this.getBoundingClientRect(), y = e.clientY - rect.top, h = rect.height, th = h / 3;
-        const td = parseInt(this.dataset.depth) || 0;
+        const rect = this.getBoundingClientRect(), y = e.clientY - rect.top, h = rect.height;
         const fromTodo = todos.find(t => t.id === fromId);
-        if (y >= th && y <= h - th && td === 0) {
-            setParent(fromId, toId);
-            showToast('서브 할 일로 변경됨', 'info');
-        } else {
+        {
             const tt = todos.find(t => t.id === toId);
             if (fromTodo && tt) fromTodo.parentId = tt.parentId;
             const fi = manualOrder.indexOf(fromId);
             if (fi !== -1) {
                 manualOrder.splice(fi, 1);
-                if (y >= h - th) manualOrder.splice(manualOrder.indexOf(toId) + 1, 0, fromId);
+                if (y >= h * 0.5) manualOrder.splice(manualOrder.indexOf(toId) + 1, 0, fromId);
                 else manualOrder.splice(manualOrder.indexOf(toId), 0, fromId);
             }
             saveTodos(); renderTodos(); updateStats();
@@ -936,10 +928,9 @@
         document.querySelectorAll('.todo-row').forEach(el => el.classList.remove('drag-over', 'drag-over-child', 'drag-over-above', 'drag-over-below'));
         const ti = eb?.closest('.todo-row');
         if (ti && ti.dataset.id !== draggedId) {
-            const r = ti.getBoundingClientRect(), y = t.clientY - r.top, h = r.height, th = h / 3, d = parseInt(ti.dataset.depth) || 0;
-            if (y < th) ti.classList.add('drag-over-above');
-            else if (y > h - th) ti.classList.add('drag-over-below');
-            else ti.classList.add(d === 0 ? 'drag-over-child' : 'drag-over-below');
+            const r = ti.getBoundingClientRect(), y = t.clientY - r.top, h = r.height;
+            if (y < h * 0.5) ti.classList.add('drag-over-above');
+            else ti.classList.add('drag-over-below');
         }
     }
     function handleTouchEnd(e) {
@@ -949,14 +940,13 @@
         if (touchItem) touchItem.classList.remove('dragging');
         const t = e.changedTouches[0], eb = document.elementFromPoint(t.clientX, t.clientY), ti = eb?.closest('.todo-row');
         if (ti && ti.dataset.id !== draggedId) {
-            const fid = draggedId, tid = ti.dataset.id, r = ti.getBoundingClientRect(), y = t.clientY - r.top, h = r.height, th = h / 3, d = parseInt(ti.dataset.depth) || 0;
+            const fid = draggedId, tid = ti.dataset.id, r = ti.getBoundingClientRect(), y = t.clientY - r.top, h = r.height;
             const ft = todos.find(t => t.id === fid);
-            if (y >= th && y <= h - th && d === 0) { setParent(fid, tid); showToast('서브 할 일로 변경됨', 'info'); }
-            else {
+            {
                 const tt = todos.find(t => t.id === tid); if (ft && tt) ft.parentId = tt.parentId;
                 const fi = manualOrder.indexOf(fid); if (fi !== -1) {
                     manualOrder.splice(fi, 1);
-                    if (y >= h - th) manualOrder.splice(manualOrder.indexOf(tid) + 1, 0, fid);
+                    if (y >= h * 0.5) manualOrder.splice(manualOrder.indexOf(tid) + 1, 0, fid);
                     else manualOrder.splice(manualOrder.indexOf(tid), 0, fid);
                 }
                 saveTodos(); renderTodos(); updateStats();
