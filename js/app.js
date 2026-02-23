@@ -1130,8 +1130,8 @@
     // View Switching
     // ==========================================
     let currentView = 'home';
-    const todoView = $('#todoView'), bugView = $('#bugView'), homeView = $('#homeView');
-    const navBugTracker = $('#navBugTracker'), navHome = $('#navHome');
+    const todoView = $('#todoView'), bugView = $('#bugView'), homeView = $('#homeView'), memoView = $('#memoView');
+    const navBugTracker = $('#navBugTracker'), navHome = $('#navHome'), navMemo = $('#navMemo');
 
     function switchView(view) {
         currentView = view;
@@ -1139,8 +1139,10 @@
         homeView.style.display = 'none';
         todoView.style.display = 'none';
         bugView.style.display = 'none';
+        memoView.style.display = 'none';
         navHome.classList.remove('active');
         navBugTracker.classList.remove('active');
+        navMemo.classList.remove('active');
         $$('.nav-item[data-filter]').forEach(b => b.classList.remove('active'));
         $$('.nav-item[data-category]').forEach(b => b.classList.remove('active'));
 
@@ -1152,6 +1154,10 @@
             bugView.style.display = 'block';
             navBugTracker.classList.add('active');
             renderBugs();
+        } else if (view === 'memo') {
+            memoView.style.display = 'block';
+            navMemo.classList.add('active');
+            renderMemos();
         } else {
             todoView.style.display = 'block';
             setFilter(currentFilter);
@@ -1227,6 +1233,302 @@
         bugAddTest.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); addBug('test', bugAddTest.value); bugAddTest.value = ''; } });
         navBugTracker.addEventListener('click', () => { switchView(currentView === 'bugs' ? 'home' : 'bugs'); });
         bugMenuToggle.addEventListener('click', () => { sidebar.classList.toggle('open'); toggleOverlay(sidebar.classList.contains('open')); });
+    }
+
+    // ==========================================
+    // Memo
+    // ==========================================
+    const MEMO_STORAGE_KEY = 'kyongmin_memo_data';
+    let memos = [];
+    let editingMemoId = null;
+    let deletingMemoId = null;
+    let memoSearchQuery = '';
+
+    const memoList = $('#memoList');
+    const memoEmpty = $('#memoEmpty');
+    const memoAddBtn = $('#memoAddBtn');
+    const memoSearchInput = $('#memoSearchInput');
+    const memoSearchToggle = $('#memoSearchToggle');
+    const memoSearchBox = $('#memoSearchBox');
+    const memoEditModal = $('#memoEditModal');
+    const memoTitleInput = $('#memoTitleInput');
+    const memoContentInput = $('#memoContentInput');
+    const memoModalTitle = $('#memoModalTitle');
+    const memoModalSave = $('#memoModalSave');
+    const memoModalCancel = $('#memoModalCancel');
+    const memoModalClose = $('#memoModalClose');
+    const memoDeleteBtn = $('#memoDeleteBtn');
+    const memoPinToggle = $('#memoPinToggle');
+    const memoColorPicker = $('#memoColorPicker');
+    const memoConfirmModal = $('#memoConfirmModal');
+    const memoConfirmDelete = $('#memoConfirmDelete');
+    const memoConfirmCancel = $('#memoConfirmCancel');
+    const memoMenuToggle = $('#memoMenuToggle');
+    const badgeMemos = $('#badgeMemos');
+
+    function loadMemos() {
+        try {
+            const data = localStorage.getItem(MEMO_STORAGE_KEY);
+            memos = data ? JSON.parse(data) : [];
+        } catch(e) { memos = []; }
+    }
+
+    function saveMemos() {
+        try {
+            localStorage.setItem(MEMO_STORAGE_KEY, JSON.stringify(memos));
+        } catch(e) { showToast('메모 저장 중 오류가 발생했습니다.', 'error'); }
+    }
+
+    function createMemo(title, content, color, pinned) {
+        const memo = {
+            id: generateId(),
+            title: title.trim(),
+            content: content.trim(),
+            color: color || 'default',
+            pinned: !!pinned,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+        };
+        memos.unshift(memo);
+        saveMemos();
+        return memo;
+    }
+
+    function updateMemo(id, data) {
+        const memo = memos.find(m => m.id === id);
+        if (!memo) return;
+        if (data.title !== undefined) memo.title = data.title.trim();
+        if (data.content !== undefined) memo.content = data.content.trim();
+        if (data.color !== undefined) memo.color = data.color;
+        if (data.pinned !== undefined) memo.pinned = data.pinned;
+        memo.updatedAt = new Date().toISOString();
+        saveMemos();
+    }
+
+    function deleteMemo(id) {
+        memos = memos.filter(m => m.id !== id);
+        saveMemos();
+    }
+
+    function getFilteredMemos() {
+        if (!memoSearchQuery) return [...memos];
+        const q = memoSearchQuery.toLowerCase();
+        return memos.filter(m =>
+            (m.title && m.title.toLowerCase().includes(q)) ||
+            (m.content && m.content.toLowerCase().includes(q))
+        );
+    }
+
+    function formatMemoDate(iso) {
+        const d = new Date(iso);
+        const now = new Date();
+        const diffMs = now - d;
+        const diffMin = Math.floor(diffMs / 60000);
+        if (diffMin < 1) return '방금 전';
+        if (diffMin < 60) return `${diffMin}분 전`;
+        const diffHr = Math.floor(diffMin / 60);
+        if (diffHr < 24) return `${diffHr}시간 전`;
+        const diffDay = Math.floor(diffHr / 24);
+        if (diffDay < 7) return `${diffDay}일 전`;
+        return d.toLocaleDateString('ko-KR', { year: 'numeric', month: 'short', day: 'numeric' });
+    }
+
+    function escapeHtmlMemo(text) {
+        return escapeHtml(text);
+    }
+
+    function renderMemos() {
+        const filtered = getFilteredMemos();
+        // 고정된 메모 먼저, 나머지는 최신순
+        const pinned = filtered.filter(m => m.pinned);
+        const unpinned = filtered.filter(m => !m.pinned);
+        const sorted = [...pinned, ...unpinned];
+
+        if (badgeMemos) badgeMemos.textContent = memos.length;
+
+        if (sorted.length === 0) {
+            memoList.innerHTML = '';
+            memoEmpty.classList.add('show');
+            return;
+        }
+
+        memoEmpty.classList.remove('show');
+        memoList.innerHTML = sorted.map(m => {
+            const colorClass = m.color && m.color !== 'default' ? ` color-${m.color}` : '';
+            const pinnedClass = m.pinned ? ' pinned' : '';
+            const title = m.title ? escapeHtmlMemo(m.title) : '<em style="color:var(--gray-300);">(제목 없음)</em>';
+            const content = m.content ? escapeHtmlMemo(m.content) : '';
+            const date = formatMemoDate(m.updatedAt);
+            return `<div class="memo-card${colorClass}${pinnedClass}" data-memo-id="${m.id}">
+                <div class="memo-card-title">${title}</div>
+                ${content ? `<div class="memo-card-content">${content}</div>` : ''}
+                <div class="memo-card-date">${date}</div>
+            </div>`;
+        }).join('');
+
+        // Bind click to open edit
+        memoList.querySelectorAll('.memo-card').forEach(card => {
+            card.addEventListener('click', () => {
+                openMemoModal(card.dataset.memoId);
+            });
+        });
+    }
+
+    function openMemoModal(id) {
+        if (id) {
+            const memo = memos.find(m => m.id === id);
+            if (!memo) return;
+            editingMemoId = id;
+            memoModalTitle.textContent = '메모 수정';
+            memoTitleInput.value = memo.title || '';
+            memoContentInput.value = memo.content || '';
+            memoDeleteBtn.style.display = 'inline-flex';
+            // Set color
+            setMemoColor(memo.color || 'default');
+            // Set pin
+            memoPinToggle.classList.toggle('active', !!memo.pinned);
+        } else {
+            editingMemoId = null;
+            memoModalTitle.textContent = '새 메모';
+            memoTitleInput.value = '';
+            memoContentInput.value = '';
+            memoDeleteBtn.style.display = 'none';
+            setMemoColor('default');
+            memoPinToggle.classList.remove('active');
+        }
+        memoEditModal.classList.add('show');
+        setTimeout(() => memoTitleInput.focus(), 100);
+    }
+
+    function closeMemoModal() {
+        memoEditModal.classList.remove('show');
+        editingMemoId = null;
+    }
+
+    function saveMemoFromModal() {
+        const title = memoTitleInput.value.trim();
+        const content = memoContentInput.value.trim();
+        if (!title && !content) {
+            showToast('제목이나 내용을 입력하세요.', 'error');
+            return;
+        }
+        const color = getSelectedMemoColor();
+        const pinned = memoPinToggle.classList.contains('active');
+
+        if (editingMemoId) {
+            updateMemo(editingMemoId, { title, content, color, pinned });
+            showToast('메모가 수정되었습니다.');
+        } else {
+            createMemo(title, content, color, pinned);
+            showToast('새 메모가 추가되었습니다.');
+        }
+        closeMemoModal();
+        renderMemos();
+    }
+
+    function setMemoColor(color) {
+        memoColorPicker.querySelectorAll('.memo-color-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.color === color);
+        });
+    }
+
+    function getSelectedMemoColor() {
+        const active = memoColorPicker.querySelector('.memo-color-btn.active');
+        return active ? active.dataset.color : 'default';
+    }
+
+    function initMemoEvents() {
+        if (!memoAddBtn) return;
+
+        memoAddBtn.addEventListener('click', () => openMemoModal(null));
+        memoModalSave.addEventListener('click', saveMemoFromModal);
+        memoModalCancel.addEventListener('click', closeMemoModal);
+        memoModalClose.addEventListener('click', closeMemoModal);
+
+        // Close on overlay click
+        memoEditModal.addEventListener('click', (e) => {
+            if (e.target === memoEditModal) closeMemoModal();
+        });
+
+        // Enter in title → move to content
+        memoTitleInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') { e.preventDefault(); memoContentInput.focus(); }
+        });
+
+        // Ctrl+Enter in content → save
+        memoContentInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); saveMemoFromModal(); }
+        });
+
+        // Color picker
+        memoColorPicker.querySelectorAll('.memo-color-btn').forEach(btn => {
+            btn.addEventListener('click', () => setMemoColor(btn.dataset.color));
+        });
+
+        // Pin toggle
+        memoPinToggle.addEventListener('click', () => {
+            memoPinToggle.classList.toggle('active');
+        });
+
+        // Delete button → show confirm
+        memoDeleteBtn.addEventListener('click', () => {
+            if (!editingMemoId) return;
+            deletingMemoId = editingMemoId;
+            memoConfirmModal.classList.add('show');
+        });
+
+        // Confirm delete
+        memoConfirmDelete.addEventListener('click', () => {
+            if (deletingMemoId) {
+                deleteMemo(deletingMemoId);
+                showToast('메모가 삭제되었습니다.');
+                deletingMemoId = null;
+            }
+            memoConfirmModal.classList.remove('show');
+            closeMemoModal();
+            renderMemos();
+        });
+
+        memoConfirmCancel.addEventListener('click', () => {
+            deletingMemoId = null;
+            memoConfirmModal.classList.remove('show');
+        });
+
+        memoConfirmModal.addEventListener('click', (e) => {
+            if (e.target === memoConfirmModal) {
+                deletingMemoId = null;
+                memoConfirmModal.classList.remove('show');
+            }
+        });
+
+        // Search
+        if (memoSearchInput) {
+            memoSearchInput.addEventListener('input', () => {
+                memoSearchQuery = memoSearchInput.value.trim();
+                renderMemos();
+            });
+        }
+
+        // Mobile search toggle
+        if (memoSearchToggle) {
+            memoSearchToggle.addEventListener('click', () => {
+                memoSearchBox.classList.toggle('mobile-open');
+                if (memoSearchBox.classList.contains('mobile-open')) {
+                    memoSearchInput.focus();
+                }
+            });
+        }
+
+        // Sidebar nav
+        navMemo.addEventListener('click', () => { switchView(currentView === 'memo' ? 'home' : 'memo'); });
+
+        // Memo menu toggle (hamburger)
+        if (memoMenuToggle) {
+            memoMenuToggle.addEventListener('click', () => {
+                sidebar.classList.toggle('open');
+                toggleOverlay(sidebar.classList.contains('open'));
+            });
+        }
     }
 
     // ==========================================
@@ -1466,7 +1768,7 @@
                     return;
                 }
                 setActiveTab(tab);
-                switchView(tab === 'todo' ? 'todo' : tab === 'bugs' ? 'bugs' : 'home');
+                switchView(tab === 'todo' ? 'todo' : tab === 'bugs' ? 'bugs' : tab === 'memo' ? 'memo' : 'home');
             });
         });
 
@@ -1546,6 +1848,7 @@
     function syncMobileTab() {
         if (currentView === 'home') setActiveTab('home');
         else if (currentView === 'bugs') setActiveTab('bugs');
+        else if (currentView === 'memo') setActiveTab('memo');
         else setActiveTab('todo');
     }
 
@@ -1570,11 +1873,11 @@
     }
 
     function init() {
-        loadTodos(); loadSort(); loadBugs();
+        loadTodos(); loadSort(); loadBugs(); loadMemos();
         migrateOverdueTodos();
         updateHeaderDate();
-        renderTodos(); updateStats(); renderBugs();
-        initEventListeners(); initBugEvents(); initCalendar(); initMobileTabbar();
+        renderTodos(); updateStats(); renderBugs(); renderMemos();
+        initEventListeners(); initBugEvents(); initMemoEvents(); initCalendar(); initMobileTabbar();
         switchView('home');
     }
 
