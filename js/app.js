@@ -473,9 +473,16 @@
     // 스크롤 복원용 변수 — renderTodos 전역에서 공유
     let _scrollLock = null;
 
+    function getScrollEl() {
+        // 실제 스크롤되는 요소 탐지: html(documentElement) vs .main-content
+        const mc = document.querySelector('.main-content');
+        if (mc && mc.scrollHeight > mc.clientHeight) return mc;
+        return document.documentElement;
+    }
+
     function renderTodos() {
         // 스크롤 위치 저장 (동기)
-        const sc = document.querySelector('.main-content') || document.documentElement;
+        const sc = getScrollEl();
         const saved = sc.scrollTop;
         _scrollLock = { el: sc, top: saved };
 
