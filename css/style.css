@@ -53,10 +53,10 @@
 
 /* Reset */
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
-html { font-size: 16px; scroll-behavior: smooth; }
+html { font-size: 19px; scroll-behavior: smooth; }
 
 body {
-    font-family: 'Inter', 'Noto Sans KR', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-family: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
     background: var(--bg);
     color: var(--gray-800);
     min-height: 100vh;
@@ -94,27 +94,24 @@ body {
 .logo { display: flex; align-items: center; gap: 12px; }
 
 .logo-mark {
-    width: 36px; height: 36px;
+    width: 40px; height: 40px;
     background: var(--c-pink);
     color: var(--accent-text);
     border-radius: var(--radius-sm);
     display: flex; align-items: center; justify-content: center;
-    font-family: 'Inter', sans-serif;
-    font-weight: 800; font-size: 18px;
+    font-weight: 800; font-size: 20px;
     flex-shrink: 0;
 }
 
 .logo-text-wrap { display: flex; flex-direction: column; line-height: 1.2; }
 
 .logo-text {
-    font-family: 'Inter', sans-serif;
-    font-size: 15px; font-weight: 700;
+    font-size: 16px; font-weight: 700;
     color: var(--gray-800); letter-spacing: -0.3px;
 }
 
 .logo-sub {
-    font-family: 'Inter', sans-serif;
-    font-size: 12px; font-weight: 500;
+    font-size: 13px; font-weight: 500;
     color: var(--gray-400); letter-spacing: 0.5px;
 }
 
@@ -137,13 +134,12 @@ body {
 .stat-card:hover { background: rgba(255,255,255,0.9); }
 
 .stat-number {
-    font-family: 'Inter', sans-serif;
-    font-size: 20px; font-weight: 700;
+    font-size: 22px; font-weight: 700;
     color: var(--accent-text);
 }
 
 .stat-label {
-    font-size: 11px; color: var(--gray-400);
+    font-size: 12px; color: var(--gray-400);
     font-weight: 500; margin-top: 1px;
 }
 
@@ -183,11 +179,11 @@ body {
 
 .nav-item {
     display: flex; align-items: center; gap: 10px;
-    width: 100%; padding: 9px 10px;
+    width: 100%; padding: 10px 10px;
     border: none; background: transparent;
     border-radius: var(--radius-xs);
     cursor: pointer; color: var(--gray-500);
-    font-size: 13px; font-family: inherit; font-weight: 500;
+    font-size: 14px; font-family: inherit; font-weight: 500;
     transition: var(--transition);
     position: relative;
 }
@@ -275,11 +271,11 @@ body {
 .header-info { flex: 1; }
 
 .header-info h1 {
-    font-size: 20px; font-weight: 700;
+    font-size: 22px; font-weight: 700;
     color: var(--gray-800); letter-spacing: -0.3px;
 }
 
-.header-info p { font-size: 12px; color: var(--gray-400); margin-top: 1px; }
+.header-info p { font-size: 13px; color: var(--gray-400); margin-top: 1px; }
 
 .header-actions {
     display: flex; align-items: center; gap: 6px; position: relative;
@@ -320,7 +316,7 @@ body {
 
 .search-box input {
     border: none; background: transparent; outline: none;
-    font-size: 13px; font-family: inherit; color: var(--gray-700); width: 100%;
+    font-size: 14px; font-family: inherit; color: var(--gray-700); width: 100%;
 }
 .search-box input::placeholder { color: var(--gray-400); }
 
@@ -453,13 +449,13 @@ body {
    Todo Row — Block Editor Style (each row is editable)
    ==================================================== */
 .todo-row {
-    display: flex; align-items: center; gap: 10px;
-    padding: 6px 12px;
+    display: flex; align-items: center; gap: 12px;
+    padding: 8px 14px;
     background: transparent;
     border: none;
     transition: background 0.15s ease, opacity 0.2s ease;
     position: relative;
-    min-height: 38px;
+    min-height: 44px;
 }
 
 /* 새로 추가된 행만 애니메이션 */
@@ -554,7 +550,7 @@ body {
 .text-area {
     width: 100%;
     border: none; outline: none;
-    font-size: 14.5px;
+    font-size: 16px;
     font-weight: 400;
     color: var(--gray-500);
     line-height: 1.8;
@@ -599,13 +595,13 @@ body {
 
 /* ===== Row Checkbox ===== */
 .row-checkbox {
-    position: relative; width: 18px; height: 18px; flex-shrink: 0;
+    position: relative; width: 20px; height: 20px; flex-shrink: 0;
     cursor: pointer;
 }
 .row-checkbox input { display: none; }
 
 .cb-mark {
-    width: 18px; height: 18px;
+    width: 20px; height: 20px;
     border: 2px solid var(--c-mauve);
     border-radius: 50%;
     display: flex; align-items: center; justify-content: center;
@@ -621,7 +617,7 @@ body {
 }
 
 .cb-mark i {
-    color: var(--accent-text); font-size: 9px;
+    color: var(--accent-text); font-size: 10px;
     opacity: 0; transform: scale(0);
     transition: var(--transition);
 }
@@ -630,10 +626,10 @@ body {
     opacity: 1; transform: scale(1);
 }
 
-/* Sub checkbox (smaller) */
-.row-checkbox.sub-cb { width: 15px; height: 15px; }
-.row-checkbox.sub-cb .cb-mark { width: 15px; height: 15px; border-width: 1.5px; }
-.row-checkbox.sub-cb .cb-mark i { font-size: 7px; }
+/* Sub checkbox — 동일 크기 유지 */
+.row-checkbox.sub-cb { width: 20px; height: 20px; }
+.row-checkbox.sub-cb .cb-mark { width: 20px; height: 20px; border-width: 2px; }
+.row-checkbox.sub-cb .cb-mark i { font-size: 10px; }
 
 /* ===== Row Body (input + meta) ===== */
 .row-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
@@ -641,28 +637,37 @@ body {
 .row-input {
     width: 100%;
     border: none; outline: none;
-    font-size: 13.5px; font-family: inherit;
+    font-size: 15px; font-family: inherit;
     color: var(--gray-800); background: transparent;
-    padding: 2px 0;
+    padding: 3px 0;
     font-weight: 500;
     caret-color: var(--accent);
-    line-height: 1.4;
+    line-height: 1.5;
 }
 
 .row-input::placeholder { color: var(--gray-300); font-weight: 400; }
 
 /* Child items */
 .todo-row.is-child .row-input {
-    font-size: 12.5px;
-    color: var(--gray-600);
+    font-size: 14px;
+    color: var(--gray-700);
     font-weight: 400;
 }
 
+.todo-row.is-child {
+    background: var(--gray-50);
+    border-radius: var(--radius-xs);
+    margin-left: 24px;
+    border-left: 3px solid var(--c-pink);
+}
+
+.todo-row.is-child:hover {
+    background: var(--c-pale);
+}
+
 .todo-row.is-child::before {
-    content: '';
-    position: absolute;
-    left: 20px; top: 0; bottom: 0;
-    width: 1px;
+    display: none;
+}
     background: var(--gray-200);
 }
 
@@ -673,7 +678,7 @@ body {
 }
 
 .row-tag {
-    font-size: 9px; padding: 0px 5px;
+    font-size: 10px; padding: 1px 6px;
     border-radius: var(--radius-full);
     font-weight: 600; letter-spacing: 0.2px;
     display: inline-flex; align-items: center; gap: 2px;
@@ -717,9 +722,9 @@ body {
 .todo-row:hover .row-actions { opacity: 1; }
 
 .row-star {
-    padding: 4px; border: none; background: none;
+    padding: 5px; border: none; background: none;
     cursor: pointer; color: var(--gray-300);
-    font-size: 13px; transition: var(--transition);
+    font-size: 15px; transition: var(--transition);
     border-radius: var(--radius-xs);
 }
 
@@ -727,9 +732,9 @@ body {
 .row-star.active { color: #fbbf24; }
 
 .row-action-btn {
-    padding: 4px 6px; border: none; background: none;
+    padding: 5px 7px; border: none; background: none;
     cursor: pointer; color: var(--gray-400);
-    font-size: 11px; transition: var(--transition);
+    font-size: 13px; transition: var(--transition);
     border-radius: var(--radius-xs);
 }
 
@@ -1508,8 +1513,7 @@ body {
 }
 
 .mobile-stat-num {
-    font-family: 'Inter', sans-serif;
-    font-size: 22px; font-weight: 700;
+    font-size: 24px; font-weight: 700;
     color: var(--accent-text);
 }
 
