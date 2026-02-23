@@ -133,6 +133,7 @@
         const topLevel = filteredTodos.filter(t => isTopLevel(t));
         const result = [];
         const orderMap = {}; manualOrder.forEach((id,i) => orderMap[id]=i);
+        topLevel.sort((a,b) => (orderMap[a.id]??9999) - (orderMap[b.id]??9999));
         function add(todo) {
             result.push(todo);
             const ch = filteredTodos.filter(t => t.parentId === todo.id);
@@ -444,9 +445,32 @@
                 </div>`;
     }
 
+    // 완료된 top-level 그룹을 하단으로 (자식 포함)
+    function sortCompletedToBottom(orderedList) {
+        const incGroups = [], doneGroups = [];
+        const visited = new Set();
+        for (const t of orderedList) {
+            if (visited.has(t.id)) continue;
+            if (isTopLevel(t)) {
+                const group = [t, ...orderedList.filter(c => c.parentId === t.id)];
+                group.forEach(g => visited.add(g.id));
+                if (t.completed) doneGroups.push(...group);
+                else incGroups.push(...group);
+            } else if (!visited.has(t.id)) {
+                visited.add(t.id);
+                incGroups.push(t);
+            }
+        }
+        return [...incGroups, ...doneGroups];
+    }
+
     function renderTodos() {
         const filtered = getFilteredTodos();
-        const ordered = buildOrderedList(filtered);
+        let ordered = buildOrderedList(filtered);
+        // 완료 필터가 아닐 때 완료 항목 하단 정렬
+        if (currentFilter !== 'completed') {
+            ordered = sortCompletedToBottom(ordered);
+        }
         lastOrderedList = ordered;
 
         // Quick tasks
@@ -1202,12 +1226,25 @@
         return `${y}-${m}-${day}`;
     }
 
+    function getTodoDateKey(t) {
+        // dueDate가 있으면 그걸 우선, 없으면 createdAt 사용
+        if (t.dueDate) return t.dueDate;
+        if (t.createdAt) return formatDateKey(new Date(t.createdAt));
+        return null;
+    }
+
     function getTodosForDate(dateKey) {
+        // 해당 날짜의 top-level 할 일
+        const topMatches = todos.filter(t => {
+            if (t.type === 'text') return false;
+            if (!isTopLevel(t)) return false;
+            return getTodoDateKey(t) === dateKey;
+        });
+        const topIds = new Set(topMatches.map(t => t.id));
+        // top-level + 그 자식들 포함
         return todos.filter(t => {
             if (t.type === 'text') return false;
-            if (!t.createdAt) return false;
-            const created = new Date(t.createdAt);
-            return formatDateKey(created) === dateKey;
+            return topIds.has(t.id) || topIds.has(t.parentId);
         });
     }
 
@@ -1287,8 +1324,10 @@
         const d = new Date(calSelectedDate + 'T00:00:00');
         const label = d.toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'short' });
         const dayTodos = getTodosForDate(calSelectedDate);
-        const total = dayTodos.length;
-        const done = dayTodos.filter(t => t.completed).length;
+        // 서브태스크 제외한 top-level만 카운트
+        const topOnly = dayTodos.filter(t => isTopLevel(t));
+        const total = topOnly.length;
+        const done = topOnly.filter(t => t.completed).length;
         const allDone = total > 0 && done === total;
 
         dayPanelTitle.textContent = label;
@@ -1305,13 +1344,29 @@
             html += '<div class="day-celebrate-banner">🎉 모두 완료! 대단해요! 🎉</div>';
         }
 
-        // Sort: incomplete first, then completed
-        const sorted = [...dayTodos.filter(t => !t.completed), ...dayTodos.filter(t => t.completed)];
+        // 전체보기와 같은 순서 사용 (manualOrder 기반 + 부모-자식 구조)
+        const ordered = buildOrderedList(dayTodos);
+        // 완료 항목 하단 (top-level 기준 그룹 단위)
+        const incGroups = [], doneGroups = [];
+        const visited = new Set();
+        for (const t of ordered) {
+            if (visited.has(t.id)) continue;
+            if (isTopLevel(t)) {
+                const group = [t, ...ordered.filter(c => c.parentId === t.id)];
+                group.forEach(g => visited.add(g.id));
+                if (t.completed) doneGroups.push(...group);
+                else incGroups.push(...group);
+            }
+        }
+        const sorted = [...incGroups, ...doneGroups];
 
         for (const t of sorted) {
             const catHtml = t.category ? `<span class="day-todo-cat ${t.category}">${getCategoryLabel(t.category)}</span>` : '';
-            html += `<div class="day-todo-item${t.completed ? ' completed' : ''}">
-                <label class="day-todo-cb">
+            const isChild = !isTopLevel(t);
+            const indentStyle = isChild ? ' style="padding-left:36px;"' : '';
+            const subClass = isChild ? ' sub-item' : '';
+            html += `<div class="day-todo-item${t.completed ? ' completed' : ''}${subClass}"${indentStyle}>
+                <label class="day-todo-cb${isChild ? ' sub' : ''}">
                     <input type="checkbox" ${t.completed ? 'checked' : ''} onchange="window.KTodo.toggleTodoHome('${t.id}')">
                     <span class="day-todo-cbmark"><i class="fas fa-check"></i></span>
                 </label>
@@ -1461,8 +1516,26 @@
     // ==========================================
     // Init
     // ==========================================
+    // 미완료 할 일 자동 이월 (자정 기준)
+    function migrateOverdueTodos() {
+        const todayKey = formatDateKey(new Date());
+        let changed = false;
+        todos.forEach(t => {
+            if (t.type === 'text') return;
+            if (t.completed) return;
+            const dateKey = getTodoDateKey(t);
+            if (!dateKey) return;
+            if (dateKey < todayKey) {
+                t.dueDate = todayKey;
+                changed = true;
+            }
+        });
+        if (changed) saveTodos();
+    }
+
     function init() {
         loadTodos(); loadSort(); loadBugs();
+        migrateOverdueTodos();
         updateHeaderDate();
         renderTodos(); updateStats(); renderBugs();
         initEventListeners(); initBugEvents(); initCalendar(); initMobileTabbar();
