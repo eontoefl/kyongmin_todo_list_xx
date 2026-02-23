@@ -801,12 +801,12 @@ body {
 
 /* ===== Drag & Drop zone indicators ===== */
 .todo-row.drag-over-above {
-    box-shadow: 0 -3px 0 0 var(--accent) inset;
+    box-shadow: 0 3px 0 0 var(--accent) inset;
     background: rgba(255, 202, 212, 0.15);
 }
 
 .todo-row.drag-over-below {
-    box-shadow: 0 3px 0 0 var(--accent) inset;
+    box-shadow: 0 -3px 0 0 var(--accent) inset;
     background: rgba(255, 202, 212, 0.15);
 }
 
