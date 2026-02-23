@@ -470,14 +470,17 @@
         return [...incGroups, ...doneGroups];
     }
 
+    // 스크롤 복원용 변수 — renderTodos 전역에서 공유
+    let _scrollLock = null;
+
     function renderTodos() {
-        // 스크롤 위치 저장
-        const scrollContainer = document.querySelector('.main-content') || document.documentElement;
-        const savedScrollTop = scrollContainer.scrollTop;
+        // 스크롤 위치 저장 (동기)
+        const sc = document.querySelector('.main-content') || document.documentElement;
+        const saved = sc.scrollTop;
+        _scrollLock = { el: sc, top: saved };
 
         const filtered = getFilteredTodos();
         let ordered = buildOrderedList(filtered);
-        // 완료 필터가 아닐 때 완료 항목 하단 정렬
         if (currentFilter !== 'completed') {
             ordered = sortCompletedToBottom(ordered);
         }
@@ -489,9 +492,9 @@
             normalSectionHeader.style.display = 'none';
             emptyState.classList.toggle('show', ordered.length === 0);
             todoList.innerHTML = ordered.map(buildTodoRowHTML).join('') + buildNewRowHTML();
+            sc.scrollTop = saved; // 즉시 복원
             bindAllRowEvents(todoList);
             if (currentSort === 'manual') initDragAndDrop(todoList);
-            requestAnimationFrame(() => { scrollContainer.scrollTop = savedScrollTop; });
             restoreFocus();
             return;
         }
@@ -514,26 +517,22 @@
 
         emptyState.classList.toggle('show', ordered.length === 0);
         todoList.innerHTML = normalTasks.map(buildTodoRowHTML).join('') + buildNewRowHTML();
+        sc.scrollTop = saved; // innerHTML 직후 즉시 복원
         bindAllRowEvents(todoList);
         if (currentSort === 'manual') initDragAndDrop(todoList);
 
-        // 새로 생성된 행만 애니메이션 적용
         if (animateNewId) {
             const newRow = todoList.querySelector(`.todo-row[data-id="${animateNewId}"]`);
             if (newRow) newRow.classList.add('animate-in');
             animateNewId = null;
         }
 
-        // 스크롤 위치 복원
-        requestAnimationFrame(() => {
-            scrollContainer.scrollTop = savedScrollTop;
-        });
         restoreFocus();
     }
 
     function restoreFocus() {
-        // DOM 재구성 후 포커스 복원 — 스크롤 절대 건드리지 않음
         setTimeout(() => {
+            // 포커스 복원
             if (focusTargetId) {
                 const inp = document.querySelector(`.row-input[data-id="${focusTargetId}"]`)
                            || document.querySelector(`.text-area[data-id="${focusTargetId}"]`);
@@ -548,7 +547,12 @@
                 if (nr) nr.focus({ preventScroll: true });
                 focusNewRow = false;
             }
-        }, 20);
+            // 포커스 후 스크롤 다시 강제 복원
+            if (_scrollLock) {
+                _scrollLock.el.scrollTop = _scrollLock.top;
+                _scrollLock = null;
+            }
+        }, 10);
     }
 
     // ==========================================
