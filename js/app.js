@@ -620,7 +620,7 @@
                 manualOrder.splice(newIdx, 1);
                 manualOrder.splice(currentIdx, 0, newTodo.id);
                 saveTodos();
-                focusTargetId = id; // 기존 항목에 포커스 유지
+                focusTargetId = newTodo.id; // 새로 생긴 항목에 포커스
             } else {
                 // 커서가 중간/끝 → 현재 항목 "아래에" 새 행 생성
                 const newTodo = createTodo('', todo.parentId);
