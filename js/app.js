@@ -523,14 +523,16 @@
                 const inp = document.querySelector(`.row-input[data-id="${focusTargetId}"]`)
                            || document.querySelector(`.text-area[data-id="${focusTargetId}"]`);
                 if (inp) {
-                    inp.focus();
+                    inp.focus({ preventScroll: true });
                     const len = inp.value.length;
                     inp.setSelectionRange(len, len);
+                    // 부드럽게 보이는 영역으로만 스크롤
+                    inp.scrollIntoView({ block: 'nearest', behavior: 'instant' });
                 }
                 focusTargetId = null;
             } else if (focusNewRow) {
                 const nr = document.getElementById('newRowInput');
-                if (nr) nr.focus();
+                if (nr) nr.focus({ preventScroll: true });
                 focusNewRow = false;
             }
         }, 20);
@@ -607,23 +609,34 @@
                 todo.text = newText;
                 saveTodos();
             }
-            // Create a new todo right after this one, at the same depth
-            const newTodo = createTodo('', todo.parentId);
-            // Position it right after the current item in manual order
-            const currentIdx = manualOrder.indexOf(id);
-            // Find the last descendant of current todo
-            const descendants = getDescendantIds(id);
-            let insertAfterIdx = currentIdx;
-            for (const did of descendants) {
-                const di = manualOrder.indexOf(did);
-                if (di > insertAfterIdx) insertAfterIdx = di;
+
+            const cursorPos = inp.selectionStart;
+
+            if (cursorPos === 0 && newText.length > 0) {
+                // 커서가 맨 앞 → 현재 항목 "위에" 빈 행 생성
+                const newTodo = createTodo('', todo.parentId);
+                const currentIdx = manualOrder.indexOf(id);
+                const newIdx = manualOrder.indexOf(newTodo.id);
+                manualOrder.splice(newIdx, 1);
+                manualOrder.splice(currentIdx, 0, newTodo.id);
+                saveTodos();
+                focusTargetId = id; // 기존 항목에 포커스 유지
+            } else {
+                // 커서가 중간/끝 → 현재 항목 "아래에" 새 행 생성
+                const newTodo = createTodo('', todo.parentId);
+                const currentIdx = manualOrder.indexOf(id);
+                const descendants = getDescendantIds(id);
+                let insertAfterIdx = currentIdx;
+                for (const did of descendants) {
+                    const di = manualOrder.indexOf(did);
+                    if (di > insertAfterIdx) insertAfterIdx = di;
+                }
+                const newIdx = manualOrder.indexOf(newTodo.id);
+                manualOrder.splice(newIdx, 1);
+                manualOrder.splice(insertAfterIdx + 1, 0, newTodo.id);
+                saveTodos();
+                focusTargetId = newTodo.id; // 새 항목에 포커스
             }
-            // Move new todo's order position to right after
-            const newIdx = manualOrder.indexOf(newTodo.id);
-            manualOrder.splice(newIdx, 1);
-            manualOrder.splice(insertAfterIdx + 1, 0, newTodo.id);
-            saveTodos();
-            focusTargetId = newTodo.id;
             renderTodos();
             updateStats();
             return;
