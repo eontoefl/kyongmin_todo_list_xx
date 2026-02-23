@@ -1102,6 +1102,141 @@ body {
     background: var(--gray-50); border-color: var(--gray-300);
 }
 
+/* ===== Memo View ===== */
+.memo-view .main-header { position: sticky; top: 0; z-index: 10; }
+.memo-view .header-actions { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+.memo-search-toggle { display: none; }
+.memo-search-box {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--gray-50); border-radius: var(--radius-md);
+    padding: 8px 14px; transition: var(--transition);
+}
+.memo-search-box i { color: var(--gray-300); font-size: 13px; }
+.memo-search-box input {
+    border: none; outline: none; background: none;
+    font-size: 14px; color: var(--text); width: 160px;
+}
+.memo-add-btn {
+    width: 38px; height: 38px; border-radius: 50%;
+    background: var(--c-mauve); color: #fff; border: none;
+    font-size: 15px; cursor: pointer; display: flex;
+    align-items: center; justify-content: center;
+    transition: var(--transition);
+}
+.memo-add-btn:hover { background: var(--accent-text); transform: scale(1.05); }
+
+.memo-content { padding: 20px 32px 32px; }
+
+/* Memo Grid */
+.memo-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 16px;
+}
+
+/* Memo Card */
+.memo-card {
+    background: var(--surface); border: 1px solid var(--gray-100);
+    border-radius: var(--radius-lg); padding: 20px;
+    cursor: pointer; transition: var(--transition);
+    display: flex; flex-direction: column; gap: 10px;
+    min-height: 120px; position: relative;
+    animation: fadeIn 0.2s ease;
+}
+.memo-card:hover {
+    border-color: var(--c-pale);
+    box-shadow: 0 4px 16px rgba(236, 72, 153, 0.08);
+    transform: translateY(-2px);
+}
+.memo-card.pinned {
+    border-color: var(--c-light);
+    background: linear-gradient(135deg, #fff 80%, var(--c-pale) 100%);
+}
+.memo-card.pinned::before {
+    content: '\f08d';
+    font-family: 'Font Awesome 6 Free';
+    font-weight: 900;
+    position: absolute; top: 12px; right: 14px;
+    font-size: 12px; color: var(--c-mauve);
+    transform: rotate(30deg);
+}
+/* Memo card colors */
+.memo-card.color-pink { background: #fce7f3; border-color: #fbcfe8; }
+.memo-card.color-purple { background: #f3e8ff; border-color: #e9d5ff; }
+.memo-card.color-blue { background: #dbeafe; border-color: #bfdbfe; }
+.memo-card.color-green { background: #dcfce7; border-color: #bbf7d0; }
+.memo-card.color-yellow { background: #fef9c3; border-color: #fde68a; }
+.memo-card.color-orange { background: #ffedd5; border-color: #fed7aa; }
+
+.memo-card-title {
+    font-size: 16px; font-weight: 600; color: var(--text);
+    line-height: 1.4; word-break: break-word;
+    display: -webkit-box; -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical; overflow: hidden;
+}
+.memo-card-content {
+    font-size: 13.5px; color: var(--gray-400); line-height: 1.6;
+    word-break: break-word; flex: 1;
+    display: -webkit-box; -webkit-line-clamp: 5;
+    -webkit-box-orient: vertical; overflow: hidden;
+    white-space: pre-wrap;
+}
+.memo-card-date {
+    font-size: 11px; color: var(--gray-300);
+    margin-top: auto; padding-top: 8px;
+    border-top: 1px solid var(--gray-100);
+}
+
+/* Memo Empty */
+.memo-empty {
+    display: none; text-align: center; padding: 80px 20px;
+    color: var(--gray-300);
+}
+.memo-empty.show { display: block; }
+.memo-empty-icon { font-size: 48px; color: var(--c-light); margin-bottom: 16px; }
+.memo-empty h3 { font-size: 18px; color: var(--gray-400); margin-bottom: 8px; }
+.memo-empty p { font-size: 14px; }
+
+/* Memo Modal */
+.memo-modal { max-width: 560px; }
+.memo-content-group textarea {
+    min-height: 200px; resize: vertical; line-height: 1.7;
+    font-size: 14.5px;
+}
+.memo-color-picker {
+    display: flex; gap: 8px; flex-wrap: wrap;
+}
+.memo-color-btn {
+    width: 28px; height: 28px; border-radius: 50%;
+    border: 2px solid transparent; cursor: pointer;
+    transition: var(--transition);
+}
+.memo-color-btn:hover { transform: scale(1.15); }
+.memo-color-btn.active { border-color: var(--c-mauve); box-shadow: 0 0 0 2px rgba(236,72,153,0.2); }
+
+.memo-pin-toggle {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 8px 14px; border-radius: var(--radius-md);
+    border: 1px solid var(--gray-200); background: #fff;
+    font-size: 13px; color: var(--gray-400); cursor: pointer;
+    transition: var(--transition);
+}
+.memo-pin-toggle:hover { background: var(--c-pale); color: var(--accent-text); }
+.memo-pin-toggle.active {
+    background: var(--c-mauve); color: #fff;
+    border-color: var(--c-mauve);
+}
+
+.btn-danger {
+    background: #fff; color: #ef4444; border: 1px solid #fca5a5;
+    padding: 10px 18px; border-radius: var(--radius-md);
+    font-size: 14px; font-weight: 500; cursor: pointer;
+    transition: var(--transition);
+}
+.btn-danger:hover { background: #fef2f2; border-color: #f87171; }
+
+.memo-confirm-modal { max-width: 360px; }
+
 /* ===== Toast — NO left border ===== */
 .toast-container {
     position: fixed; bottom: 24px; right: 24px;
@@ -1737,6 +1872,22 @@ body {
     .bug-section-title { font-size: 14px; }
     .bug-list .bug-item { padding: 10px 14px; }
     .bug-add-input { padding: 10px 14px; font-size: 14px; }
+
+    /* ===== 메모 모바일 ===== */
+    .memo-content { padding: 16px; }
+    .memo-list { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
+    .memo-card { padding: 16px; min-height: 100px; }
+    .memo-card-title { font-size: 15px; }
+    .memo-search-toggle { display: flex !important; }
+    .memo-search-box { display: none; }
+    .memo-search-box.mobile-open {
+        display: flex; position: absolute; left: 16px; right: 16px; top: 56px; z-index: 5;
+        background: var(--surface); box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    .memo-search-box.mobile-open input { width: 100%; }
+    .memo-modal .modal-body { padding: 16px; }
+    .memo-content-group textarea { min-height: 150px; }
+    .memo-view .menu-toggle, .memo-view .bug-menu-toggle { display: none !important; }
 
     /* Toast 위치 */
     .toast-container {
