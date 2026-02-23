@@ -453,7 +453,12 @@
         for (const t of orderedList) {
             if (visited.has(t.id)) continue;
             if (isTopLevel(t)) {
-                const group = [t, ...orderedList.filter(c => c.parentId === t.id)];
+                const children = orderedList.filter(c => c.parentId === t.id);
+                // 서브태스크 내에서도 완료된 것은 하단으로
+                const activeChildren = children.filter(c => !c.completed);
+                const doneChildren = children.filter(c => c.completed);
+                const sortedChildren = [...activeChildren, ...doneChildren];
+                const group = [t, ...sortedChildren];
                 group.forEach(g => visited.add(g.id));
                 if (t.completed) doneGroups.push(...group);
                 else incGroups.push(...group);
@@ -466,6 +471,10 @@
     }
 
     function renderTodos() {
+        // 스크롤 위치 저장
+        const scrollContainer = document.querySelector('.main-content') || document.documentElement;
+        const savedScrollTop = scrollContainer.scrollTop;
+
         const filtered = getFilteredTodos();
         let ordered = buildOrderedList(filtered);
         // 완료 필터가 아닐 때 완료 항목 하단 정렬
@@ -482,6 +491,7 @@
             todoList.innerHTML = ordered.map(buildTodoRowHTML).join('') + buildNewRowHTML();
             bindAllRowEvents(todoList);
             if (currentSort === 'manual') initDragAndDrop(todoList);
+            requestAnimationFrame(() => { scrollContainer.scrollTop = savedScrollTop; });
             restoreFocus();
             return;
         }
@@ -514,10 +524,15 @@
             animateNewId = null;
         }
 
+        // 스크롤 위치 복원
+        requestAnimationFrame(() => {
+            scrollContainer.scrollTop = savedScrollTop;
+        });
         restoreFocus();
     }
 
     function restoreFocus() {
+        // DOM 재구성 후 포커스 복원 — 스크롤 절대 건드리지 않음
         setTimeout(() => {
             if (focusTargetId) {
                 const inp = document.querySelector(`.row-input[data-id="${focusTargetId}"]`)
@@ -526,12 +541,6 @@
                     inp.focus({ preventScroll: true });
                     const len = inp.value.length;
                     inp.setSelectionRange(len, len);
-                    // 화면 밖에 있을 때만 최소한의 스크롤
-                    const rect = inp.getBoundingClientRect();
-                    const vh = window.innerHeight;
-                    if (rect.top < 0 || rect.bottom > vh) {
-                        inp.scrollIntoView({ block: 'nearest', behavior: 'instant' });
-                    }
                 }
                 focusTargetId = null;
             } else if (focusNewRow) {
@@ -1370,13 +1379,16 @@
 
         // 전체보기와 같은 순서 사용 (manualOrder 기반 + 부모-자식 구조)
         const ordered = buildOrderedList(dayTodos);
-        // 완료 항목 하단 (top-level 기준 그룹 단위)
+        // 완료 항목 하단 (top-level 기준 그룹 단위, 서브태스크도 그룹 내 하단)
         const incGroups = [], doneGroups = [];
         const visited = new Set();
         for (const t of ordered) {
             if (visited.has(t.id)) continue;
             if (isTopLevel(t)) {
-                const group = [t, ...ordered.filter(c => c.parentId === t.id)];
+                const children = ordered.filter(c => c.parentId === t.id);
+                const activeChildren = children.filter(c => !c.completed);
+                const doneChildren = children.filter(c => c.completed);
+                const group = [t, ...activeChildren, ...doneChildren];
                 group.forEach(g => visited.add(g.id));
                 if (t.completed) doneGroups.push(...group);
                 else incGroups.push(...group);
