@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="theme-color" content="#FFF1F5">
+    <title>KYONGMIN's Todo List</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Noto+Sans+KR:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="./css/style.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- 사이드바 -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <div class="logo-mark">K</div>
+                    <div class="logo-text-wrap">
+                        <span class="logo-text">KYONGMIN's</span>
+                        <span class="logo-sub">Todo List</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="sidebar-stats">
+                <div class="stat-card">
+                    <div class="stat-number" id="totalTasks">0</div>
+                    <div class="stat-label">전체</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="completedTasks">0</div>
+                    <div class="stat-label">완료</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="pendingTasks">0</div>
+                    <div class="stat-label">진행중</div>
+                </div>
+            </div>
+
+            <div class="progress-section">
+                <div class="progress-header">
+                    <span>달성률</span>
+                    <span id="progressPercent">0%</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+            </div>
+
+            <nav class="sidebar-nav">
+                <div class="nav-title">메뉴</div>
+                <button class="nav-item active" id="navHome" data-view="home">
+                    <i class="fas fa-home"></i>
+                    <span>홈</span>
+                </button>
+            </nav>
+
+            <nav class="sidebar-nav">
+                <div class="nav-title">필터</div>
+                <button class="nav-item" data-filter="all">
+                    <i class="fas fa-layer-group"></i>
+                    <span>전체 보기</span>
+                    <span class="nav-badge" id="badgeAll">0</span>
+                </button>
+                <button class="nav-item" data-filter="active">
+                    <i class="fas fa-circle-dot"></i>
+                    <span>진행중</span>
+                    <span class="nav-badge" id="badgeActive">0</span>
+                </button>
+                <button class="nav-item" data-filter="completed">
+                    <i class="fas fa-circle-check"></i>
+                    <span>완료</span>
+                    <span class="nav-badge" id="badgeCompleted">0</span>
+                </button>
+                <button class="nav-item" data-filter="important">
+                    <i class="fas fa-star"></i>
+                    <span>중요</span>
+                    <span class="nav-badge" id="badgeImportant">0</span>
+                </button>
+                <button class="nav-item" data-filter="quick">
+                    <i class="fas fa-bolt"></i>
+                    <span>빠른 할 일</span>
+                    <span class="nav-badge" id="badgeQuick">0</span>
+                </button>
+            </nav>
+
+            <nav class="sidebar-nav">
+                <div class="nav-title">도구</div>
+                <button class="nav-item" id="navBugTracker" data-view="bugs">
+                    <i class="fas fa-bug"></i>
+                    <span>개발 오류</span>
+                    <span class="nav-badge" id="badgeBugs">0</span>
+                </button>
+            </nav>
+
+            <nav class="sidebar-nav">
+                <div class="nav-title">카테고리</div>
+                <button class="nav-item" data-category="personal">
+                    <span class="cat-dot" style="background:#f472b6;"></span>
+                    <span>개인</span>
+                </button>
+                <button class="nav-item" data-category="work">
+                    <span class="cat-dot" style="background:#a78bfa;"></span>
+                    <span>업무</span>
+                </button>
+                <button class="nav-item" data-category="study">
+                    <span class="cat-dot" style="background:#60a5fa;"></span>
+                    <span>학습</span>
+                </button>
+                <button class="nav-item" data-category="health">
+                    <span class="cat-dot" style="background:#f87171;"></span>
+                    <span>건강</span>
+                </button>
+                <button class="nav-item" data-category="shopping">
+                    <span class="cat-dot" style="background:#fb923c;"></span>
+                    <span>쇼핑</span>
+                </button>
+            </nav>
+
+            <div class="sidebar-footer">
+                <button class="clear-completed-btn" id="clearCompletedBtn">
+                    <i class="fas fa-trash-alt"></i>
+                    <span>완료 항목 삭제</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- 메인 콘텐츠 -->
+        <main class="main-content">
+            <!-- ===== 개발 오류 뷰 (숨김) ===== -->
+            <div class="bug-view" id="bugView" style="display:none;">
+                <header class="main-header">
+                    <button class="menu-toggle bug-menu-toggle" id="bugMenuToggle">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                    <div class="header-info">
+                        <h1><i class="fas fa-bug" style="color:var(--accent-text);margin-right:8px;"></i>개발 오류</h1>
+                        <p>공홈 · 테스트룸 체크리스트</p>
+                    </div>
+                </header>
+
+                <div class="bug-content">
+                    <!-- 공홈 섹션 -->
+                    <section class="bug-section">
+                        <div class="bug-section-header">
+                            <div class="bug-section-title">
+                                <i class="fas fa-globe"></i>
+                                <span>공홈</span>
+                            </div>
+                            <div class="bug-section-stats">
+                                <span class="bug-stat" id="bugHomeDone">0</span>
+                                <span class="bug-stat-sep">/</span>
+                                <span class="bug-stat" id="bugHomeTotal">0</span>
+                            </div>
+                        </div>
+                        <div class="bug-progress-bar"><div class="bug-progress-fill" id="bugHomeFill"></div></div>
+                        <div class="bug-list" id="bugListHome"></div>
+                        <div class="bug-add-row">
+                            <input type="text" class="bug-add-input" id="bugAddHome" placeholder="오류 항목 추가... (Enter)" maxlength="200">
+                        </div>
+                    </section>
+
+                    <!-- 테스트룸 섹션 -->
+                    <section class="bug-section">
+                        <div class="bug-section-header">
+                            <div class="bug-section-title">
+                                <i class="fas fa-flask"></i>
+                                <span>테스트룸</span>
+                            </div>
+                            <div class="bug-section-stats">
+                                <span class="bug-stat" id="bugTestDone">0</span>
+                                <span class="bug-stat-sep">/</span>
+                                <span class="bug-stat" id="bugTestTotal">0</span>
+                            </div>
+                        </div>
+                        <div class="bug-progress-bar"><div class="bug-progress-fill" id="bugTestFill"></div></div>
+                        <div class="bug-list" id="bugListTest"></div>
+                        <div class="bug-add-row">
+                            <input type="text" class="bug-add-input" id="bugAddTest" placeholder="오류 항목 추가... (Enter)" maxlength="200">
+                        </div>
+                    </section>
+                </div>
+            </div>
+
+            <!-- ===== 홈 뷰 ===== -->
+            <div class="home-view" id="homeView">
+                <header class="main-header">
+                    <button class="menu-toggle" id="homeMenuToggle">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                    <div class="header-info">
+                        <h1><i class="fas fa-home" style="color:var(--accent-text);margin-right:8px;"></i>홈</h1>
+                        <p id="homeHeaderDate"></p>
+                    </div>
+                </header>
+
+                <div class="home-content">
+                    <!-- 캘린더 -->
+                    <div class="cal-card">
+                        <div class="cal-nav">
+                            <button class="cal-nav-btn" id="calPrev"><i class="fas fa-chevron-left"></i></button>
+                            <span class="cal-month" id="calMonth"></span>
+                            <button class="cal-nav-btn" id="calNext"><i class="fas fa-chevron-right"></i></button>
+                            <button class="cal-nav-btn cal-today-btn" id="calToday">오늘</button>
+                        </div>
+                        <div class="cal-grid">
+                            <div class="cal-weekdays">
+                                <span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span>
+                            </div>
+                            <div class="cal-days" id="calDays"></div>
+                        </div>
+                    </div>
+
+                    <!-- 날짜별 할일 패널 -->
+                    <div class="day-panel" id="dayPanel">
+                        <div class="day-panel-header">
+                            <h3 id="dayPanelTitle">날짜를 선택하세요</h3>
+                            <span class="day-panel-count" id="dayPanelCount"></span>
+                        </div>
+                        <div class="day-panel-list" id="dayPanelList">
+                            <div class="day-panel-empty">
+                                <i class="fas fa-calendar-day"></i>
+                                <p>캘린더에서 날짜를 클릭하세요</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== 할 일 뷰 ===== -->
+            <div class="todo-view" id="todoView" style="display:none;">
+            <!-- 상단 헤더 -->
+            <header class="main-header">
+                <button class="menu-toggle" id="menuToggle">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <div class="header-info">
+                    <h1 id="headerTitle">전체 할 일</h1>
+                    <p id="headerDate"></p>
+                </div>
+                <div class="header-actions">
+                    <button class="mobile-search-toggle" id="mobileSearchToggle" title="검색">
+                        <i class="fas fa-search"></i>
+                    </button>
+                    <div class="search-box" id="searchBox">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="searchInput" placeholder="검색...">
+                    </div>
+                    <button class="sort-btn" id="sortBtn" title="정렬">
+                        <i class="fas fa-arrow-down-wide-short"></i>
+                    </button>
+                    <div class="sort-dropdown" id="sortDropdown">
+                        <button data-sort="manual">내 순서</button>
+                        <button data-sort="newest">최신순</button>
+                        <button data-sort="oldest">오래된순</button>
+                        <button data-sort="name">이름순</button>
+
+                    </div>
+                </div>
+            </header>
+
+
+
+            <!-- 빠른 할 일 섹션 -->
+            <div class="quick-task-section" id="quickTaskSection" style="display:none;">
+                <div class="quick-task-header">
+                    <div class="quick-task-title">
+                        <i class="fas fa-bolt"></i>
+                        <span>빠른 할 일</span>
+                        <span class="quick-task-subtitle">10분 안에 끝낼 수 있는 일</span>
+                    </div>
+                    <span class="quick-task-count" id="quickTaskCount">0</span>
+                </div>
+                <div class="quick-task-list" id="quickTaskList"></div>
+            </div>
+
+            <!-- 일반 할 일 목록 -->
+            <div class="todo-list-section">
+                <div class="section-header" id="normalSectionHeader" style="display:none;">
+                    <span>일반 할 일</span>
+                </div>
+                <div class="todo-list" id="todoList"></div>
+                <div class="empty-state" id="emptyState">
+                    <div class="empty-icon"><i class="fas fa-clipboard-list"></i></div>
+                    <h3>할 일이 없습니다</h3>
+                    <p>아래 입력칸에 바로 타이핑해서 할 일을 추가하세요</p>
+                </div>
+            </div>
+            </div><!-- /todo-view -->
+        </main>
+    </div>
+
+    <!-- 수정 모달 -->
+    <div class="modal-overlay" id="editModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2><i class="fas fa-pen-to-square"></i> 할 일 수정</h2>
+                <button class="modal-close" id="modalClose">
+                    <i class="fas fa-xmark"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>할 일</label>
+                    <input type="text" id="editTodoInput" maxlength="200">
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>카테고리</label>
+                        <select id="editCategorySelect">
+                            <option value="">분류 없음</option>
+                            <option value="personal">개인</option>
+                            <option value="work">업무</option>
+                            <option value="study">학습</option>
+                            <option value="health">건강</option>
+                            <option value="shopping">쇼핑</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>마감일</label>
+                        <input type="date" id="editDueDateInput">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>빠른 할 일</label>
+                    <button class="quick-toggle-edit" id="editQuickToggle" title="10분 안에 끝나는 빠른 할 일">
+                        <i class="fas fa-bolt"></i>
+                        <span>10분 안에 완료</span>
+                    </button>
+                </div>
+
+                <div class="form-group">
+                    <label>메모</label>
+                    <textarea id="editNoteInput" placeholder="메모를 입력하세요..." rows="3" maxlength="500"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="modalCancel">취소</button>
+                <button class="btn btn-primary" id="modalSave">저장</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 모바일 하단 탭바 -->
+    <nav class="mobile-tabbar" id="mobileTabbar">
+        <button class="tab-item active" data-tab="home">
+            <i class="fas fa-home"></i>
+            <span>홈</span>
+        </button>
+        <button class="tab-item" data-tab="todo">
+            <i class="fas fa-list-check"></i>
+            <span>할 일</span>
+        </button>
+        <button class="tab-item" data-tab="bugs">
+            <i class="fas fa-bug"></i>
+            <span>오류</span>
+        </button>
+        <button class="tab-item" data-tab="menu">
+            <i class="fas fa-ellipsis"></i>
+            <span>더보기</span>
+        </button>
+    </nav>
+
+    <!-- 모바일 더보기 메뉴 -->
+    <div class="mobile-menu-overlay" id="mobileMenuOverlay">
+        <div class="mobile-menu-sheet" id="mobileMenuSheet">
+            <div class="mobile-menu-handle"></div>
+            <div class="mobile-menu-header">
+                <h3>메뉴</h3>
+            </div>
+            <div class="mobile-menu-stats">
+                <div class="mobile-stat">
+                    <span class="mobile-stat-num" id="mStatTotal">0</span>
+                    <span class="mobile-stat-label">전체</span>
+                </div>
+                <div class="mobile-stat">
+                    <span class="mobile-stat-num" id="mStatDone">0</span>
+                    <span class="mobile-stat-label">완료</span>
+                </div>
+                <div class="mobile-stat">
+                    <span class="mobile-stat-num" id="mStatPending">0</span>
+                    <span class="mobile-stat-label">진행중</span>
+                </div>
+            </div>
+            <div class="mobile-menu-progress">
+                <div class="progress-header">
+                    <span>달성률</span>
+                    <span id="mProgressPercent">0%</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="mProgressFill"></div>
+                </div>
+            </div>
+            <div class="mobile-menu-section">
+                <div class="mobile-menu-title">필터</div>
+                <button class="mobile-menu-item" data-mfilter="all"><i class="fas fa-layer-group"></i>전체 보기</button>
+                <button class="mobile-menu-item" data-mfilter="active"><i class="fas fa-circle-dot"></i>진행중</button>
+                <button class="mobile-menu-item" data-mfilter="completed"><i class="fas fa-circle-check"></i>완료</button>
+                <button class="mobile-menu-item" data-mfilter="important"><i class="fas fa-star"></i>중요</button>
+                <button class="mobile-menu-item" data-mfilter="quick"><i class="fas fa-bolt"></i>빠른 할 일</button>
+            </div>
+            <div class="mobile-menu-section">
+                <div class="mobile-menu-title">카테고리</div>
+                <button class="mobile-menu-item" data-mcategory="personal"><span class="cat-dot" style="background:#f472b6;"></span>개인</button>
+                <button class="mobile-menu-item" data-mcategory="work"><span class="cat-dot" style="background:#a78bfa;"></span>업무</button>
+                <button class="mobile-menu-item" data-mcategory="study"><span class="cat-dot" style="background:#60a5fa;"></span>학습</button>
+                <button class="mobile-menu-item" data-mcategory="health"><span class="cat-dot" style="background:#f87171;"></span>건강</button>
+                <button class="mobile-menu-item" data-mcategory="shopping"><span class="cat-dot" style="background:#fb923c;"></span>쇼핑</button>
+            </div>
+            <div class="mobile-menu-section">
+                <button class="mobile-menu-item danger" id="mClearCompleted"><i class="fas fa-trash-alt"></i>완료 항목 삭제</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 축하 애니메이션 -->
+    <div class="confetti-container" id="confettiContainer"></div>
+
+    <!-- 토스트 알림 -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script src="./js/app.js"></script>
+</body>
+</html>
