@@ -649,26 +649,19 @@ body {
 
 /* Child items */
 .todo-row.is-child .row-input {
-    font-size: 14px;
+    font-size: 15px;
     color: var(--gray-700);
-    font-weight: 400;
+    font-weight: 500;
 }
 
 .todo-row.is-child {
     background: var(--gray-50);
     border-radius: var(--radius-xs);
     margin-left: 24px;
-    border-left: 3px solid var(--c-pink);
 }
 
 .todo-row.is-child:hover {
     background: var(--c-pale);
-}
-
-.todo-row.is-child::before {
-    display: none;
-}
-    background: var(--gray-200);
 }
 
 /* Row meta tags */
