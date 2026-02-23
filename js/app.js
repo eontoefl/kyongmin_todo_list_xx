@@ -28,6 +28,7 @@
     // Focus management
     let focusTargetId = null; // after render, focus this todo's input
     let focusNewRow = false;  // after render, focus the new-row input
+    let animateNewId = null;  // 새로 생성된 행만 애니메이션
 
     const $ = (sel) => document.querySelector(sel);
     const $$ = (sel) => document.querySelectorAll(sel);
@@ -210,6 +211,7 @@
         };
         todos.push(todo);
         manualOrder.push(todo.id);
+        animateNewId = todo.id;
         saveTodos();
         return todo;
     }
@@ -505,6 +507,13 @@
         todoList.innerHTML = normalTasks.map(buildTodoRowHTML).join('') + buildNewRowHTML();
         bindAllRowEvents(todoList);
         if (currentSort === 'manual') initDragAndDrop(todoList);
+
+        // 새로 생성된 행만 애니메이션 적용
+        if (animateNewId) {
+            const newRow = todoList.querySelector(`.todo-row[data-id="${animateNewId}"]`);
+            if (newRow) newRow.classList.add('animate-in');
+            animateNewId = null;
+        }
 
         restoreFocus();
     }
