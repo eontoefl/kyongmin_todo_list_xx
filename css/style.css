@@ -458,9 +458,13 @@ body {
     background: transparent;
     border: none;
     transition: background 0.15s ease, opacity 0.2s ease;
-    animation: fadeIn 0.2s ease;
     position: relative;
     min-height: 38px;
+}
+
+/* 새로 추가된 행만 애니메이션 */
+.todo-row.animate-in {
+    animation: fadeIn 0.2s ease;
 }
 
 .todo-row + .todo-row {
@@ -522,7 +526,6 @@ body {
     padding: 3px 12px !important;
     gap: 0;
     background: transparent !important;
-    animation: none;
 }
 
 .todo-row.text-block:hover {
