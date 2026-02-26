@@ -1161,6 +1161,7 @@
             homeView.style.display = 'block';
             navHome.classList.add('active');
             renderCalendar();
+            renderHomeMemos();
         } else if (view === 'bugs') {
             bugView.style.display = 'block';
             navBugTracker.classList.add('active');
@@ -1383,6 +1384,9 @@
                 openMemoModal(card.dataset.memoId);
             });
         });
+
+        // 홈 메모 카드도 갱신
+        renderHomeMemos();
     }
 
     function openMemoModal(id) {
@@ -1448,6 +1452,47 @@
         return active ? active.dataset.color : 'default';
     }
 
+    // ==========================================
+    // Home Memo Cards
+    // ==========================================
+    function renderHomeMemos() {
+        const grid = $('#homeMemoGrid');
+        const empty = $('#homeMemoEmpty');
+        const section = $('#homeMemoSection');
+        if (!grid || !section) return;
+
+        // 최근 메모 최대 6개 (고정 우선)
+        const pinned = memos.filter(m => m.pinned);
+        const unpinned = memos.filter(m => !m.pinned);
+        const sorted = [...pinned, ...unpinned].slice(0, 6);
+
+        if (sorted.length === 0) {
+            grid.style.display = 'none';
+            empty.style.display = 'block';
+            return;
+        }
+
+        empty.style.display = 'none';
+        grid.style.display = 'grid';
+        grid.innerHTML = sorted.map(m => {
+            const colorClass = m.color && m.color !== 'default' ? ` color-${m.color}` : '';
+            const title = m.title ? escapeHtml(m.title) : '<em style="color:var(--gray-300);">(제목 없음)</em>';
+            const content = m.content ? escapeHtml(m.content) : '';
+            return `<div class="home-memo-card${colorClass}" data-memo-id="${m.id}">
+                <div class="home-memo-card-title">${title}</div>
+                ${content ? `<div class="home-memo-card-content">${content}</div>` : ''}
+            </div>`;
+        }).join('');
+
+        // 카드 클릭 → 메모 뷰로 이동 후 편집 모달
+        grid.querySelectorAll('.home-memo-card').forEach(card => {
+            card.addEventListener('click', () => {
+                switchView('memo');
+                setTimeout(() => openMemoModal(card.dataset.memoId), 100);
+            });
+        });
+    }
+
     function initMemoEvents() {
         if (!memoAddBtn) return;
 
@@ -1455,6 +1500,12 @@
         memoModalSave.addEventListener('click', saveMemoFromModal);
         memoModalCancel.addEventListener('click', closeMemoModal);
         memoModalClose.addEventListener('click', closeMemoModal);
+
+        // 홈 메모 "전체보기" 버튼
+        const homeMemoMore = $('#homeMemoMore');
+        if (homeMemoMore) {
+            homeMemoMore.addEventListener('click', () => switchView('memo'));
+        }
 
         // Close on overlay click
         memoEditModal.addEventListener('click', (e) => {
@@ -1573,9 +1624,25 @@
     }
 
     function getTodoDateKey(t) {
-        // dueDate가 있으면 그걸 우선, 없으면 createdAt 사용
-        if (t.dueDate) return t.dueDate;
-        if (t.createdAt) return formatDateKey(new Date(t.createdAt));
+        // 사용자가 설정한 dueDate 우선
+        if (t.dueDate) {
+            // dueDate가 과거이고 미완료면 → 오늘로 표시 (캘린더용)
+            if (!t.completed) {
+                const todayKey = formatDateKey(new Date());
+                if (t.dueDate < todayKey) return todayKey;
+            }
+            return t.dueDate;
+        }
+        // dueDate 없으면 createdAt 기반
+        if (t.createdAt) {
+            const key = formatDateKey(new Date(t.createdAt));
+            // 과거이고 미완료면 → 오늘로 표시
+            if (!t.completed) {
+                const todayKey = formatDateKey(new Date());
+                if (key < todayKey) return todayKey;
+            }
+            return key;
+        }
         return null;
     }
 
@@ -1670,14 +1737,16 @@
         const d = new Date(calSelectedDate + 'T00:00:00');
         const label = d.toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'short' });
         const dayTodos = getTodosForDate(calSelectedDate);
-        // 서브태스크 제외한 top-level만 카운트
         const topOnly = dayTodos.filter(t => isTopLevel(t));
         const total = topOnly.length;
         const done = topOnly.filter(t => t.completed).length;
-        const allDone = total > 0 && done === total;
+        const active = total - done;
 
         dayPanelTitle.textContent = label;
         dayPanelCount.textContent = total > 0 ? `${done} / ${total} 완료` : '';
+
+        // 미완료 항목만 표시
+        const activeTodos = dayTodos.filter(t => !t.completed);
 
         if (total === 0) {
             dayPanelList.innerHTML = '<div class="day-panel-empty"><i class="fas fa-face-smile"></i><p>이 날 등록된 할 일이 없습니다</p></div>';
@@ -1686,37 +1755,31 @@
 
         let html = '';
 
-        if (allDone) {
+        if (done === total && total > 0) {
             html += '<div class="day-celebrate-banner">🎉 모두 완료! 대단해요! 🎉</div>';
+            dayPanelList.innerHTML = html;
+            launchConfetti();
+            return;
         }
 
-        // 전체보기와 같은 순서 사용 (manualOrder 기반 + 부모-자식 구조)
-        const ordered = buildOrderedList(dayTodos);
-        // 완료 항목 하단 (top-level 기준 그룹 단위, 서브태스크도 그룹 내 하단)
-        const incGroups = [], doneGroups = [];
-        const visited = new Set();
+        if (active === 0 && done > 0) {
+            html += '<div class="day-celebrate-banner">🎉 모두 완료! 대단해요! 🎉</div>';
+            dayPanelList.innerHTML = html;
+            launchConfetti();
+            return;
+        }
+
+        // 전체보기와 같은 순서 사용 (manualOrder 기반)
+        const ordered = buildOrderedList(activeTodos);
+
         for (const t of ordered) {
-            if (visited.has(t.id)) continue;
-            if (isTopLevel(t)) {
-                const children = ordered.filter(c => c.parentId === t.id);
-                const activeChildren = children.filter(c => !c.completed);
-                const doneChildren = children.filter(c => c.completed);
-                const group = [t, ...activeChildren, ...doneChildren];
-                group.forEach(g => visited.add(g.id));
-                if (t.completed) doneGroups.push(...group);
-                else incGroups.push(...group);
-            }
-        }
-        const sorted = [...incGroups, ...doneGroups];
-
-        for (const t of sorted) {
             const catHtml = t.category ? `<span class="day-todo-cat ${t.category}">${getCategoryLabel(t.category)}</span>` : '';
             const isChild = !isTopLevel(t);
             const indentStyle = isChild ? ' style="padding-left:36px;"' : '';
             const subClass = isChild ? ' sub-item' : '';
-            html += `<div class="day-todo-item${t.completed ? ' completed' : ''}${subClass}"${indentStyle}>
+            html += `<div class="day-todo-item${subClass}"${indentStyle}>
                 <label class="day-todo-cb${isChild ? ' sub' : ''}">
-                    <input type="checkbox" ${t.completed ? 'checked' : ''} onchange="window.KTodo.toggleTodoHome('${t.id}')">
+                    <input type="checkbox" onchange="window.KTodo.toggleTodoHome('${t.id}')">
                     <span class="day-todo-cbmark"><i class="fas fa-check"></i></span>
                 </label>
                 ${catHtml}
@@ -1725,9 +1788,6 @@
         }
 
         dayPanelList.innerHTML = html;
-
-        // Trigger confetti on first all-done
-        if (allDone) launchConfetti();
     }
 
     function toggleTodoHome(id) {
@@ -1867,25 +1927,10 @@
     // Init
     // ==========================================
     // 미완료 할 일 자동 이월 (자정 기준)
-    function migrateOverdueTodos() {
-        const todayKey = formatDateKey(new Date());
-        let changed = false;
-        todos.forEach(t => {
-            if (t.type === 'text') return;
-            if (t.completed) return;
-            const dateKey = getTodoDateKey(t);
-            if (!dateKey) return;
-            if (dateKey < todayKey) {
-                t.dueDate = todayKey;
-                changed = true;
-            }
-        });
-        if (changed) saveTodos();
-    }
+    // migrateOverdueTodos 제거 — getTodoDateKey에서 동적 처리
 
     function init() {
         loadTodos(); loadSort(); loadBugs(); loadMemos();
-        migrateOverdueTodos();
         updateHeaderDate();
         renderTodos(); updateStats(); renderBugs(); renderMemos();
         initEventListeners(); initBugEvents(); initMemoEvents(); initCalendar(); initMobileTabbar();
