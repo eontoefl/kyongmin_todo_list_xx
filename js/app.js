@@ -20,7 +20,7 @@
     let manualOrder = [];
     let currentFilter = 'all';
     let currentCategory = null;
-    let currentSort = 'manual';
+    let currentSort = 'dueDate';
     let searchQuery = '';
     let editingId = null;
     let draggedId = null;
@@ -156,15 +156,29 @@
     function buildOrderedList(filteredTodos) {
         const topLevel = filteredTodos.filter(t => isTopLevel(t));
         const result = [];
-        const orderMap = {}; manualOrder.forEach((id,i) => orderMap[id]=i);
-        topLevel.sort((a,b) => (orderMap[a.id]??9999) - (orderMap[b.id]??9999));
-        function add(todo) {
-            result.push(todo);
-            const ch = filteredTodos.filter(t => t.parentId === todo.id);
-            ch.sort((a,b) => (orderMap[a.id]??9999) - (orderMap[b.id]??9999));
-            ch.forEach(add);
+        // manual 정렬일 때만 manualOrder 적용, 그 외는 getFilteredTodos 정렬 유지
+        if (currentSort === 'manual') {
+            const orderMap = {}; manualOrder.forEach((id,i) => orderMap[id]=i);
+            topLevel.sort((a,b) => (orderMap[a.id]??9999) - (orderMap[b.id]??9999));
+            function addManual(todo) {
+                result.push(todo);
+                const ch = filteredTodos.filter(t => t.parentId === todo.id);
+                ch.sort((a,b) => (orderMap[a.id]??9999) - (orderMap[b.id]??9999));
+                ch.forEach(addManual);
+            }
+            topLevel.forEach(addManual);
+        } else {
+            // filteredTodos 순서를 그대로 유지하면서 부모 바로 뒤에 자식 삽입
+            const added = new Set();
+            function addTree(todo) {
+                if (added.has(todo.id)) return;
+                added.add(todo.id);
+                result.push(todo);
+                const ch = filteredTodos.filter(t => t.parentId === todo.id);
+                ch.forEach(addTree);
+            }
+            topLevel.forEach(addTree);
         }
-        topLevel.forEach(add);
         return result;
     }
 
@@ -218,7 +232,7 @@
         todos.forEach(t => { if (!manualOrder.includes(t.id)) manualOrder.push(t.id); });
     }
 
-    function loadSort() { const s=localStorage.getItem(SORT_KEY)||'manual'; currentSort=s==='priority'?'manual':s; }
+    function loadSort() { const s=localStorage.getItem(SORT_KEY)||'dueDate'; currentSort=s==='priority'?'dueDate':s; }
     function saveSort() { localStorage.setItem(SORT_KEY,currentSort); }
 
     // ==========================================
