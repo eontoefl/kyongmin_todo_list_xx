@@ -388,6 +388,11 @@
         const orderMap={}; manualOrder.forEach((id,i)=>orderMap[id]=i);
         switch(currentSort){
             case'manual':f.sort((a,b)=>(orderMap[a.id]??9999)-(orderMap[b.id]??9999));break;
+            case'dueDate':f.sort((a,b)=>{
+                const da=a.dueDate||'9999-99-99', db=b.dueDate||'9999-99-99';
+                if(da!==db) return da.localeCompare(db);
+                return new Date(a.createdAt)-new Date(b.createdAt);
+            });break;
             case'newest':f.sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));break;
             case'oldest':f.sort((a,b)=>new Date(a.createdAt)-new Date(b.createdAt));break;
             case'name':f.sort((a,b)=>a.text.localeCompare(b.text,'ko'));break;
