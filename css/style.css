@@ -1612,6 +1612,150 @@ body {
 }
 .home-memo-empty p i { color: var(--c-light); }
 
+/* ===== Done Section (완료 캘린더) ===== */
+.done-section {
+    border-top: 1px solid var(--gray-100);
+    margin-top: 8px;
+}
+.done-section-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 32px;
+    cursor: pointer; transition: var(--transition);
+}
+.done-section-header:hover { background: var(--gray-50); }
+.done-section-title {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 14px; font-weight: 600; color: var(--gray-500);
+}
+.done-section-title i { color: var(--c-mauve); font-size: 14px; }
+.done-section-count {
+    background: var(--gray-100); color: var(--gray-500);
+    font-size: 11px; font-weight: 700; padding: 1px 8px;
+    border-radius: var(--radius-full);
+}
+.done-section-chevron {
+    font-size: 12px; color: var(--gray-400);
+    transition: transform 0.2s ease;
+}
+.done-section-body { padding: 0 32px 24px; }
+
+/* Done calendar row */
+.done-cal-row {
+    display: flex; gap: 20px; align-items: flex-start;
+}
+.done-cal-card {
+    background: var(--surface); border: 1px solid var(--gray-100);
+    border-radius: var(--radius-md);
+    flex-shrink: 0; width: 280px;
+}
+.done-cal-nav {
+    display: flex; align-items: center; gap: 6px;
+    padding: 12px 14px 8px;
+}
+.done-cal-month {
+    flex: 1; text-align: center;
+    font-size: 14px; font-weight: 700; color: var(--gray-700);
+}
+.done-cal-nav-btn {
+    width: 28px; height: 28px;
+    display: flex; align-items: center; justify-content: center;
+    border: 1px solid var(--gray-100); background: #fff;
+    border-radius: var(--radius-xs); cursor: pointer;
+    color: var(--gray-400); font-size: 11px;
+    transition: var(--transition);
+}
+.done-cal-nav-btn:hover { background: var(--c-pale); color: var(--accent-text); }
+.done-cal-grid { padding: 0 10px 12px; }
+.done-cal-weekdays {
+    display: grid; grid-template-columns: repeat(7, 1fr);
+    text-align: center; margin-bottom: 2px;
+}
+.done-cal-weekdays span {
+    font-size: 9px; font-weight: 700; color: var(--gray-400);
+    text-transform: uppercase; padding: 4px 0;
+}
+.done-cal-weekdays span:first-child { color: #ef4444; }
+.done-cal-weekdays span:last-child { color: #3b82f6; }
+.done-cal-days {
+    display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px;
+}
+.done-cal-day {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 5px 0; border-radius: var(--radius-xs);
+    cursor: pointer; transition: var(--transition);
+    position: relative; min-height: 36px; gap: 1px;
+}
+.done-cal-day:hover { background: var(--c-pale); }
+.done-cal-day.other { opacity: 0.2; cursor: default; }
+.done-cal-day.selected { background: var(--c-rose); box-shadow: inset 0 0 0 2px var(--c-pink); }
+.done-cal-day.today .done-cal-num {
+    background: var(--c-mauve); color: #fff;
+    border-radius: 50%; width: 22px; height: 22px;
+    display: flex; align-items: center; justify-content: center;
+}
+.done-cal-num { font-size: 12px; font-weight: 500; color: var(--gray-700); }
+.done-cal-day:nth-child(7n+1) .done-cal-num { color: #ef4444; }
+.done-cal-day:nth-child(7n) .done-cal-num { color: #3b82f6; }
+.done-cal-day.today .done-cal-num { color: #fff; }
+.done-cal-dot {
+    font-size: 8px; font-weight: 700; color: var(--c-mauve);
+}
+.done-cal-day.has-done::after {
+    content: ''; width: 4px; height: 4px;
+    background: var(--c-mauve); border-radius: 50%;
+    position: absolute; bottom: 3px;
+}
+
+/* Done day list */
+.done-day-list {
+    flex: 1; min-width: 0;
+    background: var(--surface); border: 1px solid var(--gray-100);
+    border-radius: var(--radius-md);
+    display: flex; flex-direction: column;
+    max-height: 320px;
+}
+.done-day-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 16px 8px;
+    border-bottom: 1px solid var(--gray-100);
+}
+.done-day-header h4 {
+    font-size: 14px; font-weight: 700; color: var(--gray-700);
+}
+.done-day-count {
+    font-size: 11px; color: var(--c-mauve); font-weight: 600;
+}
+.done-day-items {
+    flex: 1; overflow-y: auto; padding: 4px 0;
+}
+.done-day-empty {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 8px; padding: 32px 16px; color: var(--gray-300);
+}
+.done-day-empty i { font-size: 24px; color: var(--c-light); }
+.done-day-empty p { font-size: 13px; }
+
+.done-item {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 16px; transition: var(--transition);
+}
+.done-item:hover { background: var(--gray-50); }
+.done-item.sub { padding-left: 32px; }
+.done-item-icon { font-size: 13px; color: var(--c-mauve); flex-shrink: 0; }
+.done-item-text {
+    font-size: 13.5px; color: var(--gray-500); flex: 1;
+    text-decoration: line-through; word-break: break-word;
+}
+.done-item-cat {
+    font-size: 9px; padding: 1px 6px;
+    border-radius: var(--radius-full); font-weight: 600; flex-shrink: 0;
+}
+.done-item-cat.personal { background: var(--c-rose); color: #9e5c6e; }
+.done-item-cat.work { background: #f3e8ff; color: #7c3aed; }
+.done-item-cat.study { background: #dbeafe; color: #2563eb; }
+.done-item-cat.health { background: var(--c-peach); color: #b45a3c; }
+.done-item-cat.shopping { background: var(--c-cream); color: #a0744e; }
+
 /* ===== Confetti ===== */
 .confetti-container {
     position: fixed; inset: 0;
@@ -1969,6 +2113,13 @@ body {
     .day-todo-item { padding: 10px 16px; gap: 10px; }
     .day-todo-cb { width: 20px; height: 20px; }
     .day-todo-text { font-size: 13.5px; }
+
+    /* ===== 완료 캘린더 모바일 ===== */
+    .done-section-body { padding: 0 14px 16px; }
+    .done-section-header { padding: 12px 14px; }
+    .done-cal-row { flex-direction: column; gap: 12px; }
+    .done-cal-card { width: 100%; }
+    .done-day-list { max-height: 240px; }
 
     /* ===== 버그 트래커 모바일 ===== */
     .bug-section-header { padding: 12px 14px 8px; }
