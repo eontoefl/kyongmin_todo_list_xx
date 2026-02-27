@@ -478,7 +478,7 @@
         // 서브태스크는 부모와 같은 마감일이면 뱃지 생략
         const showDue = dueText && !(isChild && todo.dueDate && todo.parentId && todos.find(p => p.id === todo.parentId)?.dueDate === todo.dueDate);
         if (showDue) metaParts.push(`<span class="row-tag tag-due ${dueStatus}"><i class="fas fa-calendar-alt"></i> ${dueText}</span>`);
-        if (todo.note) metaParts.push('<span class="row-tag tag-note"><i class="fas fa-sticky-note"></i></span>');
+        if (todo.note) metaParts.push(`<span class="row-tag tag-note" data-note-id="${todo.id}"><i class="fas fa-sticky-note"></i></span>`);
         if (metaParts.length > 0) metaHtml = `<div class="row-meta">${metaParts.join('')}</div>`;
 
         const hasChildren = childCount > 0;
@@ -722,11 +722,58 @@
             ta.addEventListener('blur', handleRowBlur);
         });
 
+        // Note tooltip
+        container.querySelectorAll('.tag-note[data-note-id]').forEach(el => {
+            el.addEventListener('click', (e) => {
+                e.stopPropagation();
+                showNoteTooltip(el, el.dataset.noteId);
+            });
+        });
+
         // New row input
         const newInp = container.querySelector('#newRowInput');
         if (newInp) {
             newInp.addEventListener('keydown', handleNewRowKeydown);
             newInp.addEventListener('input', () => autoReplace(newInp));
+        }
+    }
+
+    // --- Note tooltip ---
+    let activeNoteTooltip = null;
+
+    function showNoteTooltip(anchor, todoId) {
+        // 이미 열려있으면 닫기
+        if (activeNoteTooltip) { closeNoteTooltip(); return; }
+
+        const todo = todos.find(t => t.id === todoId);
+        if (!todo || !todo.note) return;
+
+        const tip = document.createElement('div');
+        tip.className = 'note-tooltip';
+        tip.innerHTML = `<div class="note-tooltip-content">${escapeHtml(todo.note).replace(/\n/g, '<br>')}</div>`;
+        document.body.appendChild(tip);
+
+        // 위치 계산
+        const rect = anchor.getBoundingClientRect();
+        tip.style.left = rect.left + rect.width / 2 + 'px';
+        tip.style.top = rect.bottom + 6 + 'px';
+
+        // 화면 밖 보정
+        requestAnimationFrame(() => {
+            const tr = tip.getBoundingClientRect();
+            if (tr.right > window.innerWidth - 12) tip.style.left = (window.innerWidth - tr.width - 12) + 'px';
+            if (tr.left < 12) tip.style.left = '12px';
+            tip.classList.add('show');
+        });
+
+        activeNoteTooltip = tip;
+        setTimeout(() => document.addEventListener('click', closeNoteTooltip, { once: true }), 0);
+    }
+
+    function closeNoteTooltip() {
+        if (activeNoteTooltip) {
+            activeNoteTooltip.remove();
+            activeNoteTooltip = null;
         }
     }
 
@@ -1563,27 +1610,24 @@
     let editingMemoId = null;
     let deletingMemoId = null;
     let memoSearchQuery = '';
+    let memoAutoSaveTimer = null;
 
-    const memoList = $('#memoList');
-    const memoEmpty = $('#memoEmpty');
+    const memoSidebarList = $('#memoSidebarList');
     const memoAddBtn = $('#memoAddBtn');
     const memoSearchInput = $('#memoSearchInput');
-    const memoSearchToggle = $('#memoSearchToggle');
-    const memoSearchBox = $('#memoSearchBox');
-    const memoEditModal = $('#memoEditModal');
-    const memoTitleInput = $('#memoTitleInput');
-    const memoContentInput = $('#memoContentInput');
-    const memoModalTitle = $('#memoModalTitle');
-    const memoModalSave = $('#memoModalSave');
-    const memoModalCancel = $('#memoModalCancel');
-    const memoModalClose = $('#memoModalClose');
-    const memoDeleteBtn = $('#memoDeleteBtn');
-    const memoPinToggle = $('#memoPinToggle');
-    const memoColorPicker = $('#memoColorPicker');
+    const memoEditor = $('#memoEditor');
+    const memoEditorEmpty = $('#memoEditorEmpty');
+    const memoEditorContent = $('#memoEditorContent');
+    const memoEditorTitle = $('#memoEditorTitle');
+    const memoEditorBody = $('#memoEditorBody');
+    const memoEditorDate = $('#memoEditorDate');
+    const memoEditorSaved = $('#memoEditorSaved');
+    const memoEditorPin = $('#memoEditorPin');
+    const memoEditorDelete = $('#memoEditorDelete');
+    const memoEditorColors = $('#memoEditorColors');
     const memoConfirmModal = $('#memoConfirmModal');
     const memoConfirmDelete = $('#memoConfirmDelete');
     const memoConfirmCancel = $('#memoConfirmCancel');
-    const memoMenuToggle = $('#memoMenuToggle');
     const badgeMemos = $('#badgeMemos');
 
     function loadMemos() {
@@ -1617,8 +1661,8 @@
     function updateMemo(id, data) {
         const memo = memos.find(m => m.id === id);
         if (!memo) return;
-        if (data.title !== undefined) memo.title = data.title.trim();
-        if (data.content !== undefined) memo.content = data.content.trim();
+        if (data.title !== undefined) memo.title = data.title;
+        if (data.content !== undefined) memo.content = data.content;
         if (data.color !== undefined) memo.color = data.color;
         if (data.pinned !== undefined) memo.pinned = data.pinned;
         memo.updatedAt = new Date().toISOString();
@@ -1657,9 +1701,9 @@
         return escapeHtml(text);
     }
 
-    function renderMemos() {
+    // --- Sidebar rendering ---
+    function renderMemoSidebar() {
         const filtered = getFilteredMemos();
-        // 고정된 메모 먼저, 나머지는 최신순
         const pinned = filtered.filter(m => m.pinned);
         const unpinned = filtered.filter(m => !m.pinned);
         const sorted = [...pinned, ...unpinned];
@@ -1667,97 +1711,119 @@
         if (badgeMemos) badgeMemos.textContent = memos.length;
 
         if (sorted.length === 0) {
-            memoList.innerHTML = '';
-            memoEmpty.classList.add('show');
+            memoSidebarList.innerHTML = '<div style="text-align:center;padding:40px 16px;color:var(--gray-300);font-size:13px;">메모가 없습니다</div>';
             return;
         }
 
-        memoEmpty.classList.remove('show');
-        memoList.innerHTML = sorted.map(m => {
-            const colorClass = m.color && m.color !== 'default' ? ` color-${m.color}` : '';
+        const colorMap = { pink:'#fce7f3', purple:'#f3e8ff', blue:'#dbeafe', green:'#dcfce7', yellow:'#fef9c3', orange:'#ffedd5' };
+
+        memoSidebarList.innerHTML = sorted.map(m => {
+            const activeClass = editingMemoId === m.id ? ' active' : '';
             const pinnedClass = m.pinned ? ' pinned' : '';
-            const title = m.title ? escapeHtmlMemo(m.title) : '<em style="color:var(--gray-300);">(제목 없음)</em>';
-            const content = m.content ? escapeHtmlMemo(m.content) : '';
+            const title = m.title || '(제목 없음)';
+            const preview = m.content ? m.content.replace(/\n/g, ' ').slice(0, 60) : '';
             const date = formatMemoDate(m.updatedAt);
-            return `<div class="memo-card${colorClass}${pinnedClass}" data-memo-id="${m.id}">
-                <div class="memo-card-title">${title}</div>
-                ${content ? `<div class="memo-card-content">${content}</div>` : ''}
-                <div class="memo-card-date">${date}</div>
+            const dotColor = colorMap[m.color];
+            const dotHtml = dotColor ? `<span class="memo-color-dot" style="background:${dotColor};"></span>` : '';
+            return `<div class="memo-sidebar-item${activeClass}${pinnedClass}" data-memo-id="${m.id}">
+                <span class="memo-sidebar-item-title">${escapeHtmlMemo(title)}</span>
+                ${preview ? `<span class="memo-sidebar-item-preview">${escapeHtmlMemo(preview)}</span>` : ''}
+                <span class="memo-sidebar-item-date">${date}</span>
+                ${dotHtml}
             </div>`;
         }).join('');
 
-        // Bind click to open edit
-        memoList.querySelectorAll('.memo-card').forEach(card => {
-            card.addEventListener('click', () => {
-                openMemoModal(card.dataset.memoId);
-            });
+        // Bind clicks
+        memoSidebarList.querySelectorAll('.memo-sidebar-item').forEach(el => {
+            el.addEventListener('click', () => selectMemo(el.dataset.memoId));
+        });
+    }
+
+    // --- Select & open memo in editor ---
+    function selectMemo(id) {
+        // 기존 편집 중이던 건 즉시 저장
+        flushMemoAutoSave();
+
+        const memo = memos.find(m => m.id === id);
+        if (!memo) return;
+
+        editingMemoId = id;
+        memoEditorEmpty.style.display = 'none';
+        memoEditorContent.style.display = 'flex';
+
+        memoEditorTitle.value = memo.title || '';
+        memoEditorBody.value = memo.content || '';
+        memoEditorDate.textContent = `수정: ${formatMemoDate(memo.updatedAt)} · 생성: ${formatMemoDate(memo.createdAt)}`;
+
+        // Color
+        memoEditorColors.querySelectorAll('.memo-color-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.color === (memo.color || 'default'));
         });
 
-        // 홈 메모 카드도 갱신
-        renderHomeMemos();
+        // Pin
+        memoEditorPin.classList.toggle('active', !!memo.pinned);
+
+        // Sidebar active state
+        memoSidebarList.querySelectorAll('.memo-sidebar-item').forEach(el => {
+            el.classList.toggle('active', el.dataset.memoId === id);
+        });
+
+        hideSavedIndicator();
     }
 
-    function openMemoModal(id) {
-        if (id) {
-            const memo = memos.find(m => m.id === id);
-            if (!memo) return;
-            editingMemoId = id;
-            memoModalTitle.textContent = '메모 수정';
-            memoTitleInput.value = memo.title || '';
-            memoContentInput.value = memo.content || '';
-            memoDeleteBtn.style.display = 'inline-flex';
-            // Set color
-            setMemoColor(memo.color || 'default');
-            // Set pin
-            memoPinToggle.classList.toggle('active', !!memo.pinned);
-        } else {
-            editingMemoId = null;
-            memoModalTitle.textContent = '새 메모';
-            memoTitleInput.value = '';
-            memoContentInput.value = '';
-            memoDeleteBtn.style.display = 'none';
-            setMemoColor('default');
-            memoPinToggle.classList.remove('active');
-        }
-        memoEditModal.classList.add('show');
-        setTimeout(() => memoTitleInput.focus(), 100);
-    }
-
-    function closeMemoModal() {
-        memoEditModal.classList.remove('show');
+    function deselectMemo() {
+        flushMemoAutoSave();
         editingMemoId = null;
+        memoEditorEmpty.style.display = 'flex';
+        memoEditorContent.style.display = 'none';
+        memoSidebarList.querySelectorAll('.memo-sidebar-item').forEach(el => el.classList.remove('active'));
     }
 
-    function saveMemoFromModal() {
-        const title = memoTitleInput.value.trim();
-        const content = memoContentInput.value.trim();
-        if (!title && !content) {
-            showToast('제목이나 내용을 입력하세요.', 'error');
-            return;
+    // --- Auto-save (debounce 500ms) ---
+    function scheduleMemoAutoSave() {
+        clearTimeout(memoAutoSaveTimer);
+        memoAutoSaveTimer = setTimeout(() => {
+            if (!editingMemoId) return;
+            updateMemo(editingMemoId, {
+                title: memoEditorTitle.value,
+                content: memoEditorBody.value
+            });
+            showSavedIndicator();
+            renderMemoSidebar(); // 사이드바 미리보기 갱신
+            renderHomeMemos();
+        }, 500);
+    }
+
+    function flushMemoAutoSave() {
+        if (memoAutoSaveTimer && editingMemoId) {
+            clearTimeout(memoAutoSaveTimer);
+            updateMemo(editingMemoId, {
+                title: memoEditorTitle.value,
+                content: memoEditorBody.value
+            });
+            memoAutoSaveTimer = null;
         }
-        const color = getSelectedMemoColor();
-        const pinned = memoPinToggle.classList.contains('active');
+    }
 
-        if (editingMemoId) {
-            updateMemo(editingMemoId, { title, content, color, pinned });
-            showToast('메모가 수정되었습니다.');
-        } else {
-            createMemo(title, content, color, pinned);
-            showToast('새 메모가 추가되었습니다.');
+    function showSavedIndicator() {
+        if (!memoEditorSaved) return;
+        memoEditorSaved.textContent = '✓ 저장됨';
+        memoEditorSaved.classList.add('show');
+        setTimeout(() => memoEditorSaved.classList.remove('show'), 2000);
+    }
+
+    function hideSavedIndicator() {
+        if (memoEditorSaved) memoEditorSaved.classList.remove('show');
+    }
+
+    // --- Render wrapper (for external calls) ---
+    function renderMemos() {
+        renderMemoSidebar();
+        // 현재 선택된 메모가 삭제되었으면 해제
+        if (editingMemoId && !memos.find(m => m.id === editingMemoId)) {
+            deselectMemo();
         }
-        closeMemoModal();
-        renderMemos();
-    }
-
-    function setMemoColor(color) {
-        memoColorPicker.querySelectorAll('.memo-color-btn').forEach(btn => {
-            btn.classList.toggle('active', btn.dataset.color === color);
-        });
-    }
-
-    function getSelectedMemoColor() {
-        const active = memoColorPicker.querySelector('.memo-color-btn.active');
-        return active ? active.dataset.color : 'default';
+        renderHomeMemos();
     }
 
     // ==========================================
@@ -1792,11 +1858,11 @@
             </div>`;
         }).join('');
 
-        // 카드 클릭 → 메모 뷰로 이동 후 편집 모달
+        // 카드 클릭 → 메모 뷰로 이동 후 선택
         grid.querySelectorAll('.home-memo-card').forEach(card => {
             card.addEventListener('click', () => {
                 switchView('memo');
-                setTimeout(() => openMemoModal(card.dataset.memoId), 100);
+                setTimeout(() => selectMemo(card.dataset.memoId), 100);
             });
         });
     }
@@ -1804,10 +1870,13 @@
     function initMemoEvents() {
         if (!memoAddBtn) return;
 
-        memoAddBtn.addEventListener('click', () => openMemoModal(null));
-        memoModalSave.addEventListener('click', saveMemoFromModal);
-        memoModalCancel.addEventListener('click', closeMemoModal);
-        memoModalClose.addEventListener('click', closeMemoModal);
+        // 새 메모 생성
+        memoAddBtn.addEventListener('click', () => {
+            const memo = createMemo('', '', 'default', false);
+            renderMemoSidebar();
+            selectMemo(memo.id);
+            memoEditorTitle.focus();
+        });
 
         // 홈 메모 "전체보기" 버튼
         const homeMemoMore = $('#homeMemoMore');
@@ -1815,41 +1884,54 @@
             homeMemoMore.addEventListener('click', () => switchView('memo'));
         }
 
-        // Close on overlay click
-        memoEditModal.addEventListener('click', (e) => {
-            if (e.target === memoEditModal) closeMemoModal();
+        // 인라인 편집 — 자동저장
+        memoEditorTitle.addEventListener('input', () => {
+            autoReplace(memoEditorTitle);
+            scheduleMemoAutoSave();
+        });
+        memoEditorTitle.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') { e.preventDefault(); memoEditorBody.focus(); }
         });
 
-        // Enter in title → move to content
-        memoTitleInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') { e.preventDefault(); memoContentInput.focus(); }
-        });
-        memoTitleInput.addEventListener('input', () => autoReplace(memoTitleInput));
-
-        // Ctrl+Enter in content → save
-        memoContentInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); saveMemoFromModal(); }
-        });
-        memoContentInput.addEventListener('input', () => autoReplace(memoContentInput));
-
-        // Color picker
-        memoColorPicker.querySelectorAll('.memo-color-btn').forEach(btn => {
-            btn.addEventListener('click', () => setMemoColor(btn.dataset.color));
+        memoEditorBody.addEventListener('input', () => {
+            autoReplace(memoEditorBody);
+            scheduleMemoAutoSave();
         });
 
-        // Pin toggle
-        memoPinToggle.addEventListener('click', () => {
-            memoPinToggle.classList.toggle('active');
+        // 색상 선택 — 즉시 저장
+        memoEditorColors.querySelectorAll('.memo-color-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                if (!editingMemoId) return;
+                memoEditorColors.querySelectorAll('.memo-color-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                updateMemo(editingMemoId, { color: btn.dataset.color });
+                renderMemoSidebar();
+                renderHomeMemos();
+                showSavedIndicator();
+            });
         });
 
-        // Delete button → show confirm
-        memoDeleteBtn.addEventListener('click', () => {
+        // 핀 토글 — 즉시 저장
+        memoEditorPin.addEventListener('click', () => {
+            if (!editingMemoId) return;
+            const memo = memos.find(m => m.id === editingMemoId);
+            if (!memo) return;
+            const newPinned = !memo.pinned;
+            memoEditorPin.classList.toggle('active', newPinned);
+            updateMemo(editingMemoId, { pinned: newPinned });
+            renderMemoSidebar();
+            renderHomeMemos();
+            showSavedIndicator();
+        });
+
+        // 삭제 버튼 → 확인 모달
+        memoEditorDelete.addEventListener('click', () => {
             if (!editingMemoId) return;
             deletingMemoId = editingMemoId;
             memoConfirmModal.classList.add('show');
         });
 
-        // Confirm delete
+        // 삭제 확인
         memoConfirmDelete.addEventListener('click', () => {
             if (deletingMemoId) {
                 deleteMemo(deletingMemoId);
@@ -1857,7 +1939,7 @@
                 deletingMemoId = null;
             }
             memoConfirmModal.classList.remove('show');
-            closeMemoModal();
+            deselectMemo();
             renderMemos();
         });
 
@@ -1873,34 +1955,16 @@
             }
         });
 
-        // Search
+        // 검색
         if (memoSearchInput) {
             memoSearchInput.addEventListener('input', () => {
                 memoSearchQuery = memoSearchInput.value.trim();
-                renderMemos();
+                renderMemoSidebar();
             });
         }
 
-        // Mobile search toggle
-        if (memoSearchToggle) {
-            memoSearchToggle.addEventListener('click', () => {
-                memoSearchBox.classList.toggle('mobile-open');
-                if (memoSearchBox.classList.contains('mobile-open')) {
-                    memoSearchInput.focus();
-                }
-            });
-        }
-
-        // Sidebar nav
+        // 사이드바 네비게이션
         navMemo.addEventListener('click', () => { switchView(currentView === 'memo' ? 'home' : 'memo'); });
-
-        // Memo menu toggle (hamburger)
-        if (memoMenuToggle) {
-            memoMenuToggle.addEventListener('click', () => {
-                sidebar.classList.toggle('open');
-                toggleOverlay(sidebar.classList.contains('open'));
-            });
-        }
     }
 
     // ==========================================
