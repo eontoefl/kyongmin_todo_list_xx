@@ -101,7 +101,11 @@
         const targetDate = new Date(dateStr + 'T00:00:00');
         if (targetDate < today) return 'overdue';
         if (targetDate.getTime() === today.getTime()) return 'today';
-        return '';
+        const diff = Math.ceil((targetDate - today) / (1000*60*60*24));
+        if (diff === 1) return 'tomorrow';
+        if (diff <= 3) return 'soon';     // 2~3일
+        if (diff <= 7) return 'week';     // 4~7일
+        return 'later';                   // 7일 초과
     }
 
     function getCategoryLabel(cat) {
@@ -471,7 +475,9 @@
         const metaParts = [];
         if (hasCat) metaParts.push(`<span class="row-tag cat-${todo.category}">${getCategoryLabel(todo.category)}</span>`);
         if (todo.quickTask) metaParts.push('<span class="row-tag tag-quick"><i class="fas fa-bolt"></i> 10MIN</span>');
-        if (dueText) metaParts.push(`<span class="row-tag tag-due ${dueStatus}"><i class="fas fa-calendar-alt"></i> ${dueText}</span>`);
+        // 서브태스크는 부모와 같은 마감일이면 뱃지 생략
+        const showDue = dueText && !(isChild && todo.dueDate && todo.parentId && todos.find(p => p.id === todo.parentId)?.dueDate === todo.dueDate);
+        if (showDue) metaParts.push(`<span class="row-tag tag-due ${dueStatus}"><i class="fas fa-calendar-alt"></i> ${dueText}</span>`);
         if (todo.note) metaParts.push('<span class="row-tag tag-note"><i class="fas fa-sticky-note"></i></span>');
         if (metaParts.length > 0) metaHtml = `<div class="row-meta">${metaParts.join('')}</div>`;
 
