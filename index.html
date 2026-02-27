@@ -192,87 +192,54 @@
 
             <!-- ===== 메모 뷰 ===== -->
             <div class="memo-view" id="memoView" style="display:none;">
-                <header class="main-header">
-                    <button class="menu-toggle" id="memoMenuToggle">
-                        <i class="fas fa-bars"></i>
-                    </button>
-                    <div class="header-info">
-                        <h1><i class="fas fa-note-sticky" style="color:var(--accent-text);margin-right:8px;"></i>메모</h1>
-                        <p id="memoHeaderSub">중요한 메모를 기록하세요</p>
-                    </div>
-                    <div class="header-actions">
-                        <button class="memo-search-toggle" id="memoSearchToggle" title="검색">
-                            <i class="fas fa-search"></i>
-                        </button>
-                        <div class="memo-search-box" id="memoSearchBox">
-                            <i class="fas fa-search"></i>
-                            <input type="text" id="memoSearchInput" placeholder="메모 검색...">
+                <div class="memo-layout">
+                    <!-- 왼쪽: 메모 목록 사이드바 -->
+                    <div class="memo-sidebar">
+                        <div class="memo-sidebar-header">
+                            <h2><i class="fas fa-note-sticky"></i> 메모</h2>
+                            <button class="memo-add-btn" id="memoAddBtn" title="새 메모">
+                                <i class="fas fa-plus"></i>
+                            </button>
                         </div>
-                        <button class="memo-add-btn" id="memoAddBtn" title="새 메모">
-                            <i class="fas fa-plus"></i>
-                        </button>
-                    </div>
-                </header>
-
-                <div class="memo-content">
-                    <!-- 메모 목록 -->
-                    <div class="memo-list" id="memoList"></div>
-                    <!-- 빈 상태 -->
-                    <div class="memo-empty" id="memoEmpty">
-                        <div class="memo-empty-icon"><i class="fas fa-note-sticky"></i></div>
-                        <h3>메모가 없습니다</h3>
-                        <p>우측 상단 <strong>+</strong> 버튼을 눌러 메모를 추가하세요</p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 메모 편집 모달 -->
-            <div class="modal-overlay memo-modal-overlay" id="memoEditModal">
-                <div class="modal memo-modal">
-                    <div class="modal-header">
-                        <h2><i class="fas fa-pen-to-square"></i> <span id="memoModalTitle">새 메모</span></h2>
-                        <button class="modal-close" id="memoModalClose">
-                            <i class="fas fa-xmark"></i>
-                        </button>
-                    </div>
-                    <div class="modal-body">
-                        <div class="form-group">
-                            <label>제목</label>
-                            <input type="text" id="memoTitleInput" placeholder="메모 제목을 입력하세요..." >
+                        <div class="memo-sidebar-search">
+                            <i class="fas fa-search"></i>
+                            <input type="text" id="memoSearchInput" placeholder="검색...">
                         </div>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label>색상</label>
-                                <div class="memo-color-picker" id="memoColorPicker">
-                                    <button class="memo-color-btn active" data-color="default" style="background:#fff;border:1px solid #ddd;"></button>
-                                    <button class="memo-color-btn" data-color="pink" style="background:#fce7f3;"></button>
-                                    <button class="memo-color-btn" data-color="purple" style="background:#f3e8ff;"></button>
-                                    <button class="memo-color-btn" data-color="blue" style="background:#dbeafe;"></button>
-                                    <button class="memo-color-btn" data-color="green" style="background:#dcfce7;"></button>
-                                    <button class="memo-color-btn" data-color="yellow" style="background:#fef9c3;"></button>
-                                    <button class="memo-color-btn" data-color="orange" style="background:#ffedd5;"></button>
+                        <div class="memo-sidebar-list" id="memoSidebarList"></div>
+                    </div>
+                    <!-- 오른쪽: 메모 에디터 (인라인 편집) -->
+                    <div class="memo-editor" id="memoEditor">
+                        <div class="memo-editor-empty" id="memoEditorEmpty">
+                            <i class="fas fa-note-sticky"></i>
+                            <p>메모를 선택하거나 새 메모를 만드세요</p>
+                        </div>
+                        <div class="memo-editor-content" id="memoEditorContent" style="display:none;">
+                            <div class="memo-editor-toolbar">
+                                <div class="memo-editor-colors" id="memoEditorColors">
+                                    <button class="memo-color-btn active" data-color="default" style="background:#fff;border:1px solid #ddd;" title="기본"></button>
+                                    <button class="memo-color-btn" data-color="pink" style="background:#fce7f3;" title="핑크"></button>
+                                    <button class="memo-color-btn" data-color="purple" style="background:#f3e8ff;" title="보라"></button>
+                                    <button class="memo-color-btn" data-color="blue" style="background:#dbeafe;" title="파랑"></button>
+                                    <button class="memo-color-btn" data-color="green" style="background:#dcfce7;" title="초록"></button>
+                                    <button class="memo-color-btn" data-color="yellow" style="background:#fef9c3;" title="노랑"></button>
+                                    <button class="memo-color-btn" data-color="orange" style="background:#ffedd5;" title="주황"></button>
+                                </div>
+                                <div class="memo-editor-actions">
+                                    <button class="memo-toolbar-btn" id="memoEditorPin" title="상단 고정">
+                                        <i class="fas fa-thumbtack"></i>
+                                    </button>
+                                    <button class="memo-toolbar-btn danger" id="memoEditorDelete" title="삭제">
+                                        <i class="fas fa-trash-alt"></i>
+                                    </button>
                                 </div>
                             </div>
-                            <div class="form-group">
-                                <label>고정</label>
-                                <button class="memo-pin-toggle" id="memoPinToggle">
-                                    <i class="fas fa-thumbtack"></i>
-                                    <span>상단 고정</span>
-                                </button>
+                            <input type="text" class="memo-editor-title" id="memoEditorTitle" placeholder="제목을 입력하세요...">
+                            <textarea class="memo-editor-body" id="memoEditorBody" placeholder="내용을 입력하세요..."></textarea>
+                            <div class="memo-editor-footer">
+                                <span class="memo-editor-date" id="memoEditorDate"></span>
+                                <span class="memo-editor-saved" id="memoEditorSaved"></span>
                             </div>
                         </div>
-                        <div class="form-group memo-content-group">
-                            <label>내용</label>
-                            <textarea id="memoContentInput" placeholder="메모 내용을 입력하세요..." rows="10" ></textarea>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button class="btn btn-danger memo-delete-btn" id="memoDeleteBtn" style="display:none;">
-                            <i class="fas fa-trash-alt"></i> 삭제
-                        </button>
-                        <div style="flex:1;"></div>
-                        <button class="btn btn-secondary" id="memoModalCancel">취소</button>
-                        <button class="btn btn-primary" id="memoModalSave">저장</button>
                     </div>
                 </div>
             </div>
