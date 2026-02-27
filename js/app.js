@@ -2235,6 +2235,10 @@
             parent.replaceChild(document.createTextNode(el.textContent), el);
             parent.normalize();
         });
+        // input/textarea 하이라이트 제거
+        document.querySelectorAll('.find-field-match').forEach(el => {
+            el.classList.remove('find-field-match', 'find-field-current');
+        });
     }
 
     function getSearchableContainer() {
@@ -2307,11 +2311,29 @@
             }
         });
 
+        // input/textarea 내 value 검색 (mark로 감쌀 수 없으므로 요소 자체에 표시)
+        container.querySelectorAll('input[type="text"], textarea').forEach(el => {
+            // 검색바 자체는 제외
+            if (el.id === 'findInput') return;
+            // 보이지 않는 요소 제외
+            if (el.offsetParent === null) return;
+            const val = el.value.toLowerCase();
+            if (val.includes(lowerQuery)) {
+                el.classList.add('find-field-match');
+                findMatches.push(el);
+            }
+        });
+
         // 카운트 업데이트
         if (findMatches.length > 0) {
             findCurrentIdx = 0;
-            findMatches[0].classList.add('current');
-            findMatches[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
+            const first = findMatches[0];
+            if (first.tagName === 'MARK') {
+                first.classList.add('current');
+            } else {
+                first.classList.add('find-field-current');
+            }
+            first.scrollIntoView({ behavior: 'smooth', block: 'center' });
             findCount.textContent = `1 / ${findMatches.length}`;
             findCount.classList.remove('no-match');
         } else {
@@ -2322,10 +2344,21 @@
 
     function findGo(dir) {
         if (findMatches.length === 0) return;
-        findMatches[findCurrentIdx].classList.remove('current');
+        const prev = findMatches[findCurrentIdx];
+        if (prev.classList) {
+            prev.classList.remove('current', 'find-field-current');
+        }
         findCurrentIdx = (findCurrentIdx + dir + findMatches.length) % findMatches.length;
-        findMatches[findCurrentIdx].classList.add('current');
-        findMatches[findCurrentIdx].scrollIntoView({ behavior: 'smooth', block: 'center' });
+        const curr = findMatches[findCurrentIdx];
+        if (curr.tagName === 'MARK') {
+            curr.classList.add('current');
+            curr.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        } else {
+            // input/textarea
+            curr.classList.add('find-field-current');
+            curr.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            curr.focus();
+        }
         findCount.textContent = `${findCurrentIdx + 1} / ${findMatches.length}`;
     }
 
