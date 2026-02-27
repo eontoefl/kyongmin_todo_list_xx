@@ -224,8 +224,31 @@
         if (!todo) return;
         todo.completed = !todo.completed;
         todo.completedAt = todo.completed ? new Date().toISOString() : null;
+        // 부모 자동완료: 서브태스크 전부 완료 → 부모 완료
+        if (todo.parentId) {
+            checkParentAutoComplete(todo.parentId);
+        }
         saveTodos(); renderTodos(); updateStats();
         if (todo.completed) showToast('완료 처리됨','success');
+    }
+
+    function checkParentAutoComplete(parentId) {
+        const parent = todos.find(t => t.id === parentId);
+        if (!parent) return;
+        const children = getChildren(parentId);
+        if (children.length === 0) return;
+        const allDone = children.every(c => c.completed);
+        if (allDone && !parent.completed) {
+            parent.completed = true;
+            parent.completedAt = new Date().toISOString();
+            // 재귀: 이 부모도 누군가의 자식이면 상위도 체크
+            if (parent.parentId) checkParentAutoComplete(parent.parentId);
+        } else if (!allDone && parent.completed) {
+            // 서브태스크 하나라도 미완료로 돌리면 부모도 미완료
+            parent.completed = false;
+            parent.completedAt = null;
+            if (parent.parentId) checkParentAutoComplete(parent.parentId);
+        }
     }
 
     function deleteTodo(id) {
@@ -502,15 +525,19 @@
 
         const filtered = getFilteredTodos();
         let ordered = buildOrderedList(filtered);
-        if (currentFilter !== 'completed') {
-            ordered = sortCompletedToBottom(ordered);
-        }
         lastOrderedList = ordered;
 
+        // 미완료만 분리 (완료 필터일 때는 전부 표시)
+        let activeOrdered;
+        if (currentFilter === 'completed') {
+            activeOrdered = ordered;
+        } else {
+            activeOrdered = ordered.filter(t => !t.completed);
+        }
+
         // 접힌 부모의 자식 숨기기
-        const visibleOrdered = ordered.filter(t => {
+        const visibleOrdered = activeOrdered.filter(t => {
             if (!t.parentId) return true;
-            // 부모가 접혀있으면 숨김
             let pid = t.parentId;
             while (pid) {
                 if (collapsedIds.has(pid)) return false;
@@ -526,9 +553,10 @@
             normalSectionHeader.style.display = 'none';
             emptyState.classList.toggle('show', visibleOrdered.length === 0);
             todoList.innerHTML = visibleOrdered.map(buildTodoRowHTML).join('') + buildNewRowHTML();
-            sc.scrollTop = saved; // 즉시 복원
+            sc.scrollTop = saved;
             bindAllRowEvents(todoList);
             if (currentSort === 'manual') initDragAndDrop(todoList);
+            renderDoneSection();
             restoreFocus();
             return;
         }
@@ -551,7 +579,7 @@
 
         emptyState.classList.toggle('show', visibleOrdered.length === 0);
         todoList.innerHTML = normalTasks.map(buildTodoRowHTML).join('') + buildNewRowHTML();
-        sc.scrollTop = saved; // innerHTML 직후 즉시 복원
+        sc.scrollTop = saved;
         bindAllRowEvents(todoList);
         if (currentSort === 'manual') initDragAndDrop(todoList);
 
@@ -559,6 +587,14 @@
             const newRow = todoList.querySelector(`.todo-row[data-id="${animateNewId}"]`);
             if (newRow) newRow.classList.add('animate-in');
             animateNewId = null;
+        }
+
+        // 완료 섹션 (완료 필터 아닐 때만)
+        if (currentFilter !== 'completed') {
+            renderDoneSection();
+        } else {
+            const ds = $('#doneSection');
+            if (ds) ds.style.display = 'none';
         }
 
         restoreFocus();
@@ -1107,6 +1143,154 @@
 
     // ==========================================
     // Events
+    // ==========================================
+    // ==========================================
+    // Done Section (완료 캘린더)
+    // ==========================================
+    let doneCalYear, doneCalMonth, doneSelectedDate = null;
+    let doneSectionOpen = true;
+
+    function initDoneSection() {
+        const now = new Date();
+        doneCalYear = now.getFullYear();
+        doneCalMonth = now.getMonth();
+        doneSelectedDate = formatDateKey(now);
+
+        const toggle = $('#doneSectionToggle');
+        const body = $('#doneSectionBody');
+        const chevron = $('#doneChevron');
+        if (toggle) {
+            toggle.addEventListener('click', () => {
+                doneSectionOpen = !doneSectionOpen;
+                body.style.display = doneSectionOpen ? 'block' : 'none';
+                chevron.style.transform = doneSectionOpen ? 'rotate(0)' : 'rotate(-90deg)';
+            });
+        }
+        const prev = $('#doneCalPrev');
+        const next = $('#doneCalNext');
+        if (prev) prev.addEventListener('click', () => { doneCalMonth--; if (doneCalMonth < 0) { doneCalMonth = 11; doneCalYear--; } renderDoneCal(); });
+        if (next) next.addEventListener('click', () => { doneCalMonth++; if (doneCalMonth > 11) { doneCalMonth = 0; doneCalYear++; } renderDoneCal(); });
+    }
+
+    function getCompletedForDate(dateKey) {
+        return todos.filter(t => {
+            if (t.type === 'text') return false;
+            if (!t.completed || !t.completedAt) return false;
+            const cKey = formatDateKey(new Date(t.completedAt));
+            return cKey === dateKey;
+        });
+    }
+
+    function renderDoneCal() {
+        const monthEl = $('#doneCalMonth');
+        const daysEl = $('#doneCalDays');
+        if (!monthEl || !daysEl) return;
+
+        monthEl.textContent = `${doneCalYear}년 ${doneCalMonth + 1}월`;
+
+        const firstDay = new Date(doneCalYear, doneCalMonth, 1).getDay();
+        const daysInMonth = new Date(doneCalYear, doneCalMonth + 1, 0).getDate();
+        const todayKey = formatDateKey(new Date());
+
+        // 이번 달 완료 건수 미리 계산
+        const monthCounts = {};
+        todos.forEach(t => {
+            if (t.type === 'text' || !t.completed || !t.completedAt) return;
+            const d = new Date(t.completedAt);
+            if (d.getFullYear() === doneCalYear && d.getMonth() === doneCalMonth) {
+                const k = formatDateKey(d);
+                monthCounts[k] = (monthCounts[k] || 0) + 1;
+            }
+        });
+
+        let html = '';
+        // 이전 달 빈칸
+        const prevDays = new Date(doneCalYear, doneCalMonth, 0).getDate();
+        for (let i = firstDay - 1; i >= 0; i--) {
+            html += `<div class="done-cal-day other">${prevDays - i}</div>`;
+        }
+        // 이번 달
+        for (let d = 1; d <= daysInMonth; d++) {
+            const key = `${doneCalYear}-${String(doneCalMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+            const isToday = key === todayKey ? ' today' : '';
+            const isSelected = key === doneSelectedDate ? ' selected' : '';
+            const count = monthCounts[key] || 0;
+            const hasDone = count > 0 ? ' has-done' : '';
+            html += `<div class="done-cal-day${isToday}${isSelected}${hasDone}" data-date="${key}">
+                <span class="done-cal-num">${d}</span>
+                ${count > 0 ? `<span class="done-cal-dot">${count}</span>` : ''}
+            </div>`;
+        }
+        // 다음 달 빈칸
+        const totalCells = firstDay + daysInMonth;
+        const remaining = totalCells % 7 === 0 ? 0 : 7 - (totalCells % 7);
+        for (let i = 1; i <= remaining; i++) {
+            html += `<div class="done-cal-day other">${i}</div>`;
+        }
+
+        daysEl.innerHTML = html;
+
+        // 날짜 클릭
+        daysEl.querySelectorAll('.done-cal-day:not(.other)').forEach(el => {
+            el.addEventListener('click', () => {
+                doneSelectedDate = el.dataset.date;
+                renderDoneCal();
+                renderDoneDayList();
+            });
+        });
+
+        renderDoneDayList();
+    }
+
+    function renderDoneDayList() {
+        const titleEl = $('#doneDayTitle');
+        const countEl = $('#doneDayCount');
+        const itemsEl = $('#doneDayItems');
+        if (!titleEl || !itemsEl) return;
+
+        if (!doneSelectedDate) {
+            titleEl.textContent = '날짜를 선택하세요';
+            countEl.textContent = '';
+            itemsEl.innerHTML = '<div class="done-day-empty"><i class="fas fa-calendar-check"></i><p>캘린더에서 날짜를 클릭하세요</p></div>';
+            return;
+        }
+
+        const d = new Date(doneSelectedDate + 'T00:00:00');
+        titleEl.textContent = d.toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'short' });
+
+        const items = getCompletedForDate(doneSelectedDate);
+        countEl.textContent = items.length > 0 ? `${items.length}개 완료` : '';
+
+        if (items.length === 0) {
+            itemsEl.innerHTML = '<div class="done-day-empty"><i class="fas fa-face-smile"></i><p>이 날 완료한 할 일이 없습니다</p></div>';
+            return;
+        }
+
+        itemsEl.innerHTML = items.map(t => {
+            const catHtml = t.category ? `<span class="done-item-cat ${t.category}">${getCategoryLabel(t.category)}</span>` : '';
+            const isChild = !isTopLevel(t);
+            return `<div class="done-item${isChild ? ' sub' : ''}">
+                <i class="fas fa-circle-check done-item-icon"></i>
+                ${catHtml}
+                <span class="done-item-text">${escapeHtml(t.text || '(미입력)')}</span>
+            </div>`;
+        }).join('');
+    }
+
+    function renderDoneSection() {
+        const ds = $('#doneSection');
+        if (!ds) return;
+
+        const completedCount = todos.filter(t => t.type !== 'text' && t.completed).length;
+        const countEl = $('#doneCount');
+        if (countEl) countEl.textContent = completedCount;
+
+        ds.style.display = 'block';
+        renderDoneCal();
+    }
+
+    // ==========================================
+    // Event Listeners
     // ==========================================
     function initEventListeners() {
         // Global keyboard shortcuts
@@ -2002,7 +2186,7 @@
         loadTodos(); loadSort(); loadBugs(); loadMemos();
         updateHeaderDate();
         renderTodos(); updateStats(); renderBugs(); renderMemos();
-        initEventListeners(); initBugEvents(); initMemoEvents(); initCalendar(); initMobileTabbar();
+        initEventListeners(); initBugEvents(); initMemoEvents(); initCalendar(); initDoneSection(); initMobileTabbar();
         switchView('home');
     }
 
