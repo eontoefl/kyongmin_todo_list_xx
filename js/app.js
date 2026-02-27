@@ -415,12 +415,14 @@
                      data-id="${todo.id}" data-parent-id="${todo.parentId||''}" data-depth="${depth}"
                      >
                     ${isDraggable ? '<span class="drag-handle"><i class="fas fa-grip-vertical"></i></span>' : ''}
-                    <label class="row-checkbox${isChild ? ' sub-cb' : ''}">
-                        <input type="checkbox" ${todo.completed ? 'checked' : ''}
-                               onchange="window.KTodo.toggleTodo('${todo.id}')">
-                        <span class="cb-mark"><i class="fas fa-check"></i></span>
-                    </label>
-                    ${hasChildren ? `<button class="collapse-toggle" onclick="window.KTodo.toggleCollapse('${todo.id}')" title="${isCollapsed ? '펼치기' : '접기'}"><i class="fas fa-chevron-${isCollapsed ? 'right' : 'down'}"></i><span class="collapse-count">${childCount}</span></button>` : ''}
+                    ${hasChildren
+                        ? `<button class="collapse-toggle" onclick="window.KTodo.toggleCollapse('${todo.id}')" title="${isCollapsed ? '펼치기' : '접기'}"><i class="fas fa-chevron-${isCollapsed ? 'right' : 'down'}"></i><span class="collapse-count">${childCount}</span></button>`
+                        : `<label class="row-checkbox${isChild ? ' sub-cb' : ''}">
+                            <input type="checkbox" ${todo.completed ? 'checked' : ''}
+                                   onchange="window.KTodo.toggleTodo('${todo.id}')">
+                            <span class="cb-mark"><i class="fas fa-check"></i></span>
+                          </label>`
+                    }
                     <div class="row-body">
                         <input type="text" class="row-input" data-id="${todo.id}"
                                value="${escapeHtml(todo.text)}"
