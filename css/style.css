@@ -705,6 +705,30 @@ body {
     flex-shrink: 0;
 }
 
+/* ===== Collapse Toggle ===== */
+.collapse-toggle {
+    display: inline-flex; align-items: center; gap: 4px;
+    background: none; border: 1px solid var(--gray-100);
+    border-radius: var(--radius-xs); padding: 2px 8px 2px 5px;
+    cursor: pointer; font-size: 10px; color: var(--gray-400);
+    transition: var(--transition); flex-shrink: 0;
+    height: 22px;
+}
+.collapse-toggle:hover {
+    background: var(--c-pale); border-color: var(--c-light); color: var(--accent-text);
+}
+.collapse-toggle i { font-size: 9px; transition: transform 0.15s ease; }
+.collapse-count {
+    font-size: 10px; font-weight: 700; color: var(--accent-text);
+}
+
+/* 서브태스크 있는 부모 — 접힌 상태 */
+.todo-row.has-children.collapsed {
+    border-left: 3px solid var(--c-light);
+    padding-left: 9px;
+    background: rgba(255, 241, 245, 0.3);
+}
+
 /* ===== Row Actions (appear on hover) ===== */
 .row-actions {
     display: flex; align-items: center; gap: 1px;
