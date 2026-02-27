@@ -30,6 +30,9 @@
     let focusNewRow = false;  // after render, focus the new-row input
     let animateNewId = null;  // 새로 생성된 행만 애니메이션
 
+    // 서브태스크 접기/펼치기 상태 (기본: 펼침)
+    const collapsedIds = new Set();
+
     const $ = (sel) => document.querySelector(sel);
     const $$ = (sel) => document.querySelectorAll(sel);
 
@@ -249,6 +252,12 @@
         t.important=!t.important; saveTodos(); renderTodos(); updateStats();
     }
 
+    function toggleCollapse(id) {
+        if (collapsedIds.has(id)) collapsedIds.delete(id);
+        else collapsedIds.add(id);
+        renderTodos();
+    }
+
     function setParent(childId, newParentId) {
         const child=todos.find(t=>t.id===childId); if(!child) return;
         if (newParentId) {
@@ -399,7 +408,10 @@
         if (todo.note) metaParts.push('<span class="row-tag tag-note"><i class="fas fa-sticky-note"></i></span>');
         if (metaParts.length > 0) metaHtml = `<div class="row-meta">${metaParts.join('')}</div>`;
 
-        return `<div class="todo-row${todo.completed ? ' completed' : ''}${isChild ? ' is-child' : ''}"
+        const hasChildren = childCount > 0;
+        const isCollapsed = collapsedIds.has(todo.id);
+
+        return `<div class="todo-row${todo.completed ? ' completed' : ''}${isChild ? ' is-child' : ''}${hasChildren ? ' has-children' : ''}${hasChildren && isCollapsed ? ' collapsed' : ''}"
                      data-id="${todo.id}" data-parent-id="${todo.parentId||''}" data-depth="${depth}"
                      >
                     ${isDraggable ? '<span class="drag-handle"><i class="fas fa-grip-vertical"></i></span>' : ''}
@@ -415,7 +427,7 @@
                                maxlength="200" autocomplete="off" spellcheck="false">
                         ${metaHtml}
                     </div>
-                    ${childCount > 0 ? `<span class="child-count-badge">${childCount}</span>` : ''}
+                    ${hasChildren ? `<button class="collapse-toggle" onclick="window.KTodo.toggleCollapse('${todo.id}')" title="${isCollapsed ? '펼치기' : '접기'}"><i class="fas fa-chevron-${isCollapsed ? 'right' : 'down'}"></i><span class="collapse-count">${childCount}</span></button>` : ''}
                     <div class="row-actions">
                         ${isChild ? `<button class="row-action-btn promote" onclick="window.KTodo.promote('${todo.id}')" title="독립"><i class="fas fa-arrow-up-right-from-square"></i></button>` : ''}
                         <button class="row-star${todo.important ? ' active' : ''}"
@@ -493,12 +505,25 @@
         }
         lastOrderedList = ordered;
 
+        // 접힌 부모의 자식 숨기기
+        const visibleOrdered = ordered.filter(t => {
+            if (!t.parentId) return true;
+            // 부모가 접혀있으면 숨김
+            let pid = t.parentId;
+            while (pid) {
+                if (collapsedIds.has(pid)) return false;
+                const parent = todos.find(p => p.id === pid);
+                pid = parent ? parent.parentId : null;
+            }
+            return true;
+        });
+
         // Quick tasks
         if (currentFilter === 'quick') {
             quickTaskSection.style.display = 'none';
             normalSectionHeader.style.display = 'none';
-            emptyState.classList.toggle('show', ordered.length === 0);
-            todoList.innerHTML = ordered.map(buildTodoRowHTML).join('') + buildNewRowHTML();
+            emptyState.classList.toggle('show', visibleOrdered.length === 0);
+            todoList.innerHTML = visibleOrdered.map(buildTodoRowHTML).join('') + buildNewRowHTML();
             sc.scrollTop = saved; // 즉시 복원
             bindAllRowEvents(todoList);
             if (currentSort === 'manual') initDragAndDrop(todoList);
@@ -506,11 +531,11 @@
             return;
         }
 
-        const quickTasks = ordered.filter(t => t.quickTask && !t.completed && isTopLevel(t));
+        const quickTasks = visibleOrdered.filter(t => t.quickTask && !t.completed && isTopLevel(t));
         const qids = new Set(quickTasks.map(t => t.id));
-        const qwc = []; for (const t of ordered) { if (qids.has(t.id) || qids.has(t.parentId)) qwc.push(t); }
+        const qwc = []; for (const t of visibleOrdered) { if (qids.has(t.id) || qids.has(t.parentId)) qwc.push(t); }
         const qwcIds = new Set(qwc.map(t => t.id));
-        const normalTasks = ordered.filter(t => !qwcIds.has(t.id));
+        const normalTasks = visibleOrdered.filter(t => !qwcIds.has(t.id));
 
         if (qwc.length > 0) {
             quickTaskSection.style.display = 'block';
@@ -522,7 +547,7 @@
 
         normalSectionHeader.style.display = (qwc.length > 0 && normalTasks.length > 0) ? 'block' : 'none';
 
-        emptyState.classList.toggle('show', ordered.length === 0);
+        emptyState.classList.toggle('show', visibleOrdered.length === 0);
         todoList.innerHTML = normalTasks.map(buildTodoRowHTML).join('') + buildNewRowHTML();
         sc.scrollTop = saved; // innerHTML 직후 즉시 복원
         bindAllRowEvents(todoList);
@@ -1981,7 +2006,8 @@
 
     window.KTodo = {
         toggleTodo, deleteTodo, toggleImportant, openEditModal,
-        promote: promoteToTopLevel, toggleBug, deleteBug, toggleTodoHome
+        promote: promoteToTopLevel, toggleBug, deleteBug, toggleTodoHome,
+        toggleCollapse
     };
 
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
