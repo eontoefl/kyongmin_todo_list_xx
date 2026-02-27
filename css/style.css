@@ -703,19 +703,24 @@ body {
 
 /* ===== Collapse Toggle ===== */
 .collapse-toggle {
-    display: inline-flex; align-items: center; gap: 4px;
-    background: none; border: 1px solid var(--gray-100);
-    border-radius: var(--radius-xs); padding: 2px 8px 2px 5px;
-    cursor: pointer; font-size: 10px; color: var(--gray-400);
+    display: inline-flex; align-items: center; justify-content: center; gap: 3px;
+    background: none; border: none;
+    cursor: pointer; font-size: 11px; color: var(--gray-400);
     transition: var(--transition); flex-shrink: 0;
-    height: 22px;
+    width: 20px; height: 20px; padding: 0;
+    border-radius: var(--radius-xs);
+    position: relative;
 }
 .collapse-toggle:hover {
-    background: var(--c-pale); border-color: var(--c-light); color: var(--accent-text);
+    background: var(--c-pale); color: var(--accent-text);
 }
-.collapse-toggle i { font-size: 9px; transition: transform 0.15s ease; }
+.collapse-toggle i { font-size: 10px; transition: transform 0.15s ease; }
 .collapse-count {
-    font-size: 10px; font-weight: 700; color: var(--accent-text);
+    font-size: 9px; font-weight: 700; color: var(--accent-text);
+    position: absolute; top: -4px; right: -6px;
+    background: var(--c-rose); border-radius: var(--radius-full);
+    min-width: 14px; height: 14px; line-height: 14px;
+    text-align: center; padding: 0 3px;
 }
 
 /* 서브태스크 있는 부모 — 접힌 상태 */
