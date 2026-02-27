@@ -1434,15 +1434,10 @@
                     searchInput.value = ''; searchQuery = ''; renderTodos(); searchInput.blur();
                 }
             }
-            // Ctrl/Cmd+F — focus search (현재 뷰에 맞는 검색창)
+            // Ctrl/Cmd+F — 페이지 내 검색 오버레이
             if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
                 e.preventDefault();
-                if (currentView === 'memo') {
-                    const ms = document.getElementById('memoSearchInput');
-                    if (ms) ms.focus();
-                } else {
-                    searchInput.focus();
-                }
+                openFindBar();
             }
 
             // Enter (not in an input/textarea/modal) — focus new row
@@ -2205,6 +2200,151 @@
         toggleTodo(id);
         renderCalendar();
     }
+
+    // ==========================================
+    // Find Bar (Ctrl+F 페이지 내 검색)
+    // ==========================================
+    const findBar = document.getElementById('findBar');
+    const findInput = document.getElementById('findInput');
+    const findCount = document.getElementById('findCount');
+    const findPrev = document.getElementById('findPrev');
+    const findNext = document.getElementById('findNext');
+    const findClose = document.getElementById('findClose');
+    let findMatches = [];
+    let findCurrentIdx = -1;
+
+    function openFindBar() {
+        findBar.classList.add('open');
+        findInput.focus();
+        findInput.select();
+    }
+
+    function closeFindBar() {
+        findBar.classList.remove('open');
+        findInput.value = '';
+        clearFindHighlights();
+        findMatches = [];
+        findCurrentIdx = -1;
+        findCount.textContent = '';
+        findCount.classList.remove('no-match');
+    }
+
+    function clearFindHighlights() {
+        document.querySelectorAll('.find-highlight').forEach(el => {
+            const parent = el.parentNode;
+            parent.replaceChild(document.createTextNode(el.textContent), el);
+            parent.normalize();
+        });
+    }
+
+    function getSearchableContainer() {
+        switch (currentView) {
+            case 'home': return document.getElementById('homeView');
+            case 'todo': return document.getElementById('todoView');
+            case 'bug': return document.getElementById('bugView');
+            case 'memo': return document.getElementById('memoView');
+            default: return document.querySelector('.main-content');
+        }
+    }
+
+    function performFind(query) {
+        clearFindHighlights();
+        findMatches = [];
+        findCurrentIdx = -1;
+
+        if (!query || query.length < 1) {
+            findCount.textContent = '';
+            findCount.classList.remove('no-match');
+            return;
+        }
+
+        const container = getSearchableContainer();
+        if (!container) return;
+
+        const lowerQuery = query.toLowerCase();
+        const walker = document.createTreeWalker(
+            container, NodeFilter.SHOW_TEXT, {
+                acceptNode: (node) => {
+                    const p = node.parentElement;
+                    if (!p) return NodeFilter.FILTER_REJECT;
+                    const tag = p.tagName;
+                    // input/textarea/script/style 내 텍스트는 건너뜀
+                    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SCRIPT' || tag === 'STYLE') return NodeFilter.FILTER_REJECT;
+                    // display:none 요소 건너뜀
+                    if (p.offsetParent === null && p.style.display !== 'fixed') return NodeFilter.FILTER_REJECT;
+                    if (node.textContent.toLowerCase().includes(lowerQuery)) return NodeFilter.FILTER_ACCEPT;
+                    return NodeFilter.FILTER_REJECT;
+                }
+            }
+        );
+
+        const textNodes = [];
+        while (walker.nextNode()) textNodes.push(walker.currentNode);
+
+        // 각 텍스트 노드에서 매칭 부분을 <mark>로 감싸기
+        textNodes.forEach(textNode => {
+            const text = textNode.textContent;
+            const lower = text.toLowerCase();
+            let idx = 0;
+            const parts = [];
+            let pos;
+
+            while ((pos = lower.indexOf(lowerQuery, idx)) !== -1) {
+                if (pos > idx) parts.push(document.createTextNode(text.slice(idx, pos)));
+                const mark = document.createElement('mark');
+                mark.className = 'find-highlight';
+                mark.textContent = text.slice(pos, pos + query.length);
+                parts.push(mark);
+                findMatches.push(mark);
+                idx = pos + query.length;
+            }
+
+            if (parts.length > 0) {
+                if (idx < text.length) parts.push(document.createTextNode(text.slice(idx)));
+                const frag = document.createDocumentFragment();
+                parts.forEach(p => frag.appendChild(p));
+                textNode.parentNode.replaceChild(frag, textNode);
+            }
+        });
+
+        // 카운트 업데이트
+        if (findMatches.length > 0) {
+            findCurrentIdx = 0;
+            findMatches[0].classList.add('current');
+            findMatches[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
+            findCount.textContent = `1 / ${findMatches.length}`;
+            findCount.classList.remove('no-match');
+        } else {
+            findCount.textContent = '일치 없음';
+            findCount.classList.add('no-match');
+        }
+    }
+
+    function findGo(dir) {
+        if (findMatches.length === 0) return;
+        findMatches[findCurrentIdx].classList.remove('current');
+        findCurrentIdx = (findCurrentIdx + dir + findMatches.length) % findMatches.length;
+        findMatches[findCurrentIdx].classList.add('current');
+        findMatches[findCurrentIdx].scrollIntoView({ behavior: 'smooth', block: 'center' });
+        findCount.textContent = `${findCurrentIdx + 1} / ${findMatches.length}`;
+    }
+
+    // Find bar events
+    if (findInput) {
+        let findDebounce = null;
+        findInput.addEventListener('input', () => {
+            clearTimeout(findDebounce);
+            findDebounce = setTimeout(() => performFind(findInput.value.trim()), 200);
+        });
+        findInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); findGo(1); }
+            if (e.key === 'Enter' && e.shiftKey) { e.preventDefault(); findGo(-1); }
+            if (e.key === 'Escape') { e.preventDefault(); closeFindBar(); }
+        });
+    }
+    if (findNext) findNext.addEventListener('click', () => findGo(1));
+    if (findPrev) findPrev.addEventListener('click', () => findGo(-1));
+    if (findClose) findClose.addEventListener('click', closeFindBar);
 
     // ==========================================
     // Confetti Animation
