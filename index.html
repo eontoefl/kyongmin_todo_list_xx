@@ -399,8 +399,8 @@
                 <div class="quick-task-list" id="quickTaskList"></div>
             </div>
 
-            <!-- 일반 할 일 목록 -->
-            <div class="todo-list-section">
+            <!-- 진행중 할 일 (위쪽) -->
+            <div class="todo-list-section todo-active-section">
                 <div class="section-header" id="normalSectionHeader" style="display:none;">
                     <span>일반 할 일</span>
                 </div>
@@ -411,6 +411,47 @@
                     <p>아래 입력칸에 바로 타이핑해서 할 일을 추가하세요</p>
                 </div>
             </div>
+
+            <!-- 완료된 할 일 (아래쪽 — 캘린더) -->
+            <div class="done-section" id="doneSection">
+                <div class="done-section-header" id="doneSectionToggle">
+                    <div class="done-section-title">
+                        <i class="fas fa-circle-check"></i>
+                        <span>완료된 할 일</span>
+                        <span class="done-section-count" id="doneCount">0</span>
+                    </div>
+                    <i class="fas fa-chevron-down done-section-chevron" id="doneChevron"></i>
+                </div>
+                <div class="done-section-body" id="doneSectionBody">
+                    <div class="done-cal-row">
+                        <!-- 미니 캘린더 -->
+                        <div class="done-cal-card">
+                            <div class="done-cal-nav">
+                                <button class="done-cal-nav-btn" id="doneCalPrev"><i class="fas fa-chevron-left"></i></button>
+                                <span class="done-cal-month" id="doneCalMonth"></span>
+                                <button class="done-cal-nav-btn" id="doneCalNext"><i class="fas fa-chevron-right"></i></button>
+                            </div>
+                            <div class="done-cal-grid">
+                                <div class="done-cal-weekdays">
+                                    <span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span>
+                                </div>
+                                <div class="done-cal-days" id="doneCalDays"></div>
+                            </div>
+                        </div>
+                        <!-- 선택 날짜 완료 목록 -->
+                        <div class="done-day-list" id="doneDayList">
+                            <div class="done-day-header">
+                                <h4 id="doneDayTitle">날짜를 선택하세요</h4>
+                                <span class="done-day-count" id="doneDayCount"></span>
+                            </div>
+                            <div class="done-day-items" id="doneDayItems">
+                                <div class="done-day-empty"><i class="fas fa-calendar-check"></i><p>캘린더에서 날짜를 클릭하세요</p></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             </div><!-- /todo-view -->
         </main>
     </div>
