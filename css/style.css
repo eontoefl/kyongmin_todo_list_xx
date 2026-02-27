@@ -1296,7 +1296,7 @@ body {
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: var(--radius-md);
-    overflow: visible;
+    overflow: hidden;
     flex-shrink: 0;
     width: 300px;
     min-width: 300px;
