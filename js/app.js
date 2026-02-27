@@ -121,6 +121,26 @@
     function getChildren(parentId) { return todos.filter(t => t.parentId === parentId); }
     function isTopLevel(todo) { return !todo.parentId; }
 
+    // 서브태스크의 최상위 부모가 완료됐는지 확인
+    function isAncestorCompleted(todo) {
+        let pid = todo.parentId;
+        while (pid) {
+            const p = todos.find(t => t.id === pid);
+            if (!p) return false;
+            if (!p.parentId) return p.completed; // 최상위 도달
+            pid = p.parentId;
+        }
+        return false;
+    }
+
+    // "완료 캘린더"에 들어갈 자격이 있는지: 본인 완료 + (서브태스크면 최상위 부모도 완료)
+    function isDoneForCalendar(t) {
+        if (t.type === 'text') return false;
+        if (!t.completed || !t.completedAt) return false;
+        if (t.parentId) return isAncestorCompleted(t);
+        return true;
+    }
+
     function getDepth(todo) {
         let d = 0, c = todo;
         while (c.parentId) { d++; c = todos.find(t => t.id === c.parentId); if (!c) break; }
@@ -528,11 +548,17 @@
         lastOrderedList = ordered;
 
         // 미완료만 분리 (완료 필터일 때는 전부 표시)
+        // 서브태스크는 부모가 완료될 때까지 상단에 유지
         let activeOrdered;
         if (currentFilter === 'completed') {
             activeOrdered = ordered;
         } else {
-            activeOrdered = ordered.filter(t => !t.completed);
+            activeOrdered = ordered.filter(t => {
+                if (!t.completed) return true; // 미완료 → 항상 표시
+                // 완료된 항목: 서브태스크면 최상위 부모가 완료되어야 하단으로 이동
+                if (t.parentId && !isAncestorCompleted(t)) return true;
+                return false;
+            });
         }
 
         // 접힌 부모의 자식 숨기기
@@ -1174,8 +1200,7 @@
 
     function getCompletedForDate(dateKey) {
         return todos.filter(t => {
-            if (t.type === 'text') return false;
-            if (!t.completed || !t.completedAt) return false;
+            if (!isDoneForCalendar(t)) return false;
             const cKey = formatDateKey(new Date(t.completedAt));
             return cKey === dateKey;
         });
@@ -1195,7 +1220,7 @@
         // 이번 달 완료 건수 미리 계산
         const monthCounts = {};
         todos.forEach(t => {
-            if (t.type === 'text' || !t.completed || !t.completedAt) return;
+            if (!isDoneForCalendar(t)) return;
             const d = new Date(t.completedAt);
             if (d.getFullYear() === doneCalYear && d.getMonth() === doneCalMonth) {
                 const k = formatDateKey(d);
@@ -1281,7 +1306,7 @@
         const ds = $('#doneSection');
         if (!ds) return;
 
-        const completedCount = todos.filter(t => t.type !== 'text' && t.completed).length;
+        const completedCount = todos.filter(t => isDoneForCalendar(t)).length;
         const countEl = $('#doneCount');
         if (countEl) countEl.textContent = completedCount;
 
