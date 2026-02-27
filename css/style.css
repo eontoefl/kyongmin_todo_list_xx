@@ -649,14 +649,10 @@ body {
 
 /* Child items */
 .todo-row.is-child .row-input {
-    font-size: 15px;
-    color: var(--gray-700);
-    font-weight: 500;
+    color: var(--gray-500);
 }
 
 .todo-row.is-child {
-    background: var(--gray-50);
-    border-radius: var(--radius-xs);
     margin-left: 24px;
 }
 
@@ -1880,9 +1876,6 @@ body {
         padding: 4px 0;
     }
 
-    .todo-row.is-child .row-input {
-        font-size: 13px;
-    }
 
     /* 체크박스 확대 */
     .cb-mark { width: 22px; height: 22px; }
