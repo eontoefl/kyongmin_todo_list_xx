@@ -687,8 +687,12 @@ body {
 .row-tag.cat-shopping { background: var(--c-cream); color: #a0744e; }
 
 .row-tag.tag-due { color: var(--gray-400); background: var(--gray-100); }
-.row-tag.tag-due.overdue { color: #ef4444; background: #fef2f2; }
-.row-tag.tag-due.today { color: #d97706; background: #fffbeb; }
+.row-tag.tag-due.overdue { color: #dc2626; background: #fef2f2; font-weight: 700; }
+.row-tag.tag-due.today { color: #ea580c; background: #fff7ed; font-weight: 700; }
+.row-tag.tag-due.tomorrow { color: #d97706; background: #fffbeb; font-weight: 600; }
+.row-tag.tag-due.soon { color: #ca8a04; background: #fefce8; }
+.row-tag.tag-due.week { color: #65a30d; background: #f7fee7; }
+.row-tag.tag-due.later { color: var(--gray-400); background: var(--gray-100); }
 
 .row-tag.tag-note { color: var(--gray-400); background: var(--gray-100); }
 
