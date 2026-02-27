@@ -401,7 +401,7 @@
 
         return `<div class="todo-row${todo.completed ? ' completed' : ''}${isChild ? ' is-child' : ''}"
                      data-id="${todo.id}" data-parent-id="${todo.parentId||''}" data-depth="${depth}"
-                     ${isDraggable ? 'draggable="true"' : ''}>
+                     >
                     ${isDraggable ? '<span class="drag-handle"><i class="fas fa-grip-vertical"></i></span>' : ''}
                     <label class="row-checkbox${isChild ? ' sub-cb' : ''}">
                         <input type="checkbox" ${todo.completed ? 'checked' : ''}
@@ -563,6 +563,28 @@
     }
 
     // ==========================================
+    // Auto-replace shortcuts (e.g. -> → →)
+    // ==========================================
+    const AUTO_REPLACE = [
+        { from: '->', to: '→' },
+        { from: '<-', to: '←' },
+        { from: '=>', to: '⇒' },
+    ];
+
+    function autoReplace(el) {
+        const start = el.selectionStart;
+        let val = el.value;
+        for (const r of AUTO_REPLACE) {
+            const idx = val.lastIndexOf(r.from, start);
+            if (idx >= 0 && idx + r.from.length === start) {
+                el.value = val.slice(0, idx) + r.to + val.slice(start);
+                el.selectionStart = el.selectionEnd = idx + r.to.length;
+                return;
+            }
+        }
+    }
+
+    // ==========================================
     // Row Event Binding
     // ==========================================
     function bindAllRowEvents(container) {
@@ -570,12 +592,13 @@
         container.querySelectorAll('.row-input[data-id]').forEach(inp => {
             inp.addEventListener('keydown', handleRowKeydown);
             inp.addEventListener('blur', handleRowBlur);
+            inp.addEventListener('input', () => autoReplace(inp));
         });
 
         // Text block textareas
         container.querySelectorAll('.text-area[data-id]').forEach(ta => {
             autoResizeTextarea(ta);
-            ta.addEventListener('input', () => autoResizeTextarea(ta));
+            ta.addEventListener('input', () => { autoResizeTextarea(ta); autoReplace(ta); });
             ta.addEventListener('keydown', handleTextAreaKeydown);
             ta.addEventListener('blur', handleRowBlur);
         });
@@ -584,6 +607,7 @@
         const newInp = container.querySelector('#newRowInput');
         if (newInp) {
             newInp.addEventListener('keydown', handleNewRowKeydown);
+            newInp.addEventListener('input', () => autoReplace(newInp));
         }
     }
 
@@ -888,18 +912,33 @@
     // ==========================================
     function initDragAndDrop(container) {
         if (!container) return;
-        const items = container.querySelectorAll('.todo-row[draggable="true"]');
+        const items = container.querySelectorAll('.todo-row');
         items.forEach(item => {
-            item.addEventListener('dragstart', handleDragStart);
-            item.addEventListener('dragend', handleDragEnd);
+            // 드래그 이벤트는 행에서 받지만, 시작은 핸들에서만
             item.addEventListener('dragover', handleDragOver);
             item.addEventListener('dragenter', handleDragEnter);
             item.addEventListener('dragleave', handleDragLeave);
             item.addEventListener('drop', handleDrop);
-        });
-        items.forEach(item => {
+            item.addEventListener('dragend', handleDragEnd);
+
             const h = item.querySelector('.drag-handle');
-            if (h) h.addEventListener('touchstart', handleTouchStart, {passive: false});
+            if (h) {
+                // 마우스: 핸들 mousedown → 행 draggable 활성화
+                h.addEventListener('mousedown', () => {
+                    item.setAttribute('draggable', 'true');
+                });
+                // 터치: 기존 터치 드래그
+                h.addEventListener('touchstart', handleTouchStart, {passive: false});
+            }
+            item.addEventListener('dragstart', handleDragStart);
+        });
+        // mouseup/dragend 시 draggable 해제 (텍스트 선택 복원)
+        document.addEventListener('mouseup', clearAllDraggable);
+    }
+
+    function clearAllDraggable() {
+        document.querySelectorAll('.todo-row[draggable]').forEach(el => {
+            el.removeAttribute('draggable');
         });
     }
 
@@ -912,6 +951,7 @@
 
     function handleDragEnd() {
         this.classList.remove('dragging');
+        this.removeAttribute('draggable');
         document.querySelectorAll('.todo-row').forEach(el =>
             el.classList.remove('drag-over', 'drag-over-child', 'drag-over-above', 'drag-over-below'));
         draggedId = null;
@@ -1516,11 +1556,13 @@
         memoTitleInput.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') { e.preventDefault(); memoContentInput.focus(); }
         });
+        memoTitleInput.addEventListener('input', () => autoReplace(memoTitleInput));
 
         // Ctrl+Enter in content → save
         memoContentInput.addEventListener('keydown', (e) => {
             if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); saveMemoFromModal(); }
         });
+        memoContentInput.addEventListener('input', () => autoReplace(memoContentInput));
 
         // Color picker
         memoColorPicker.querySelectorAll('.memo-color-btn').forEach(btn => {
