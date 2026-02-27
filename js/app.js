@@ -364,7 +364,12 @@
         let f=[...todos];
         if(currentCategory) f=f.filter(t=>t.category===currentCategory);
         switch(currentFilter){
-            case'active':f=f.filter(t=>!t.completed);break;
+            case'active':f=f.filter(t=>{
+                if(!t.completed) return true;
+                // 서브태스크는 부모 소유 — 최상위 부모가 미완료면 진행중에 포함
+                if(t.parentId && !isAncestorCompleted(t)) return true;
+                return false;
+            });break;
             case'completed':f=f.filter(t=>t.completed);break;
             case'important':f=f.filter(t=>t.important);break;
             case'quick':f=f.filter(t=>t.quickTask);break;
