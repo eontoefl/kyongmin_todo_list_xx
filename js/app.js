@@ -420,6 +420,7 @@
                                onchange="window.KTodo.toggleTodo('${todo.id}')">
                         <span class="cb-mark"><i class="fas fa-check"></i></span>
                     </label>
+                    ${hasChildren ? `<button class="collapse-toggle" onclick="window.KTodo.toggleCollapse('${todo.id}')" title="${isCollapsed ? '펼치기' : '접기'}"><i class="fas fa-chevron-${isCollapsed ? 'right' : 'down'}"></i><span class="collapse-count">${childCount}</span></button>` : ''}
                     <div class="row-body">
                         <input type="text" class="row-input" data-id="${todo.id}"
                                value="${escapeHtml(todo.text)}"
@@ -427,7 +428,6 @@
                                maxlength="200" autocomplete="off" spellcheck="false">
                         ${metaHtml}
                     </div>
-                    ${hasChildren ? `<button class="collapse-toggle" onclick="window.KTodo.toggleCollapse('${todo.id}')" title="${isCollapsed ? '펼치기' : '접기'}"><i class="fas fa-chevron-${isCollapsed ? 'right' : 'down'}"></i><span class="collapse-count">${childCount}</span></button>` : ''}
                     <div class="row-actions">
                         ${isChild ? `<button class="row-action-btn promote" onclick="window.KTodo.promote('${todo.id}')" title="독립"><i class="fas fa-arrow-up-right-from-square"></i></button>` : ''}
                         <button class="row-star${todo.important ? ' active' : ''}"
