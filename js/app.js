@@ -703,6 +703,24 @@
         }
     }
 
+    // 붙여넣기 시 전체 텍스트에서 치환
+    function autoReplaceAll(el) {
+        const start = el.selectionStart;
+        let val = el.value;
+        let changed = false;
+        for (const r of AUTO_REPLACE) {
+            if (val.includes(r.from)) {
+                val = val.split(r.from).join(r.to);
+                changed = true;
+            }
+        }
+        if (changed) {
+            const diff = el.value.length - val.length;
+            el.value = val;
+            el.selectionStart = el.selectionEnd = Math.max(0, start - diff);
+        }
+    }
+
     // ==========================================
     // Row Event Binding
     // ==========================================
@@ -712,12 +730,14 @@
             inp.addEventListener('keydown', handleRowKeydown);
             inp.addEventListener('blur', handleRowBlur);
             inp.addEventListener('input', () => autoReplace(inp));
+            inp.addEventListener('paste', () => setTimeout(() => autoReplaceAll(inp), 0));
         });
 
         // Text block textareas
         container.querySelectorAll('.text-area[data-id]').forEach(ta => {
             autoResizeTextarea(ta);
             ta.addEventListener('input', () => { autoResizeTextarea(ta); autoReplace(ta); });
+            ta.addEventListener('paste', () => setTimeout(() => { autoReplaceAll(ta); autoResizeTextarea(ta); }, 0));
             ta.addEventListener('keydown', handleTextAreaKeydown);
             ta.addEventListener('blur', handleRowBlur);
         });
@@ -735,6 +755,7 @@
         if (newInp) {
             newInp.addEventListener('keydown', handleNewRowKeydown);
             newInp.addEventListener('input', () => autoReplace(newInp));
+            newInp.addEventListener('paste', () => setTimeout(() => autoReplaceAll(newInp), 0));
         }
     }
 
@@ -1413,8 +1434,16 @@
                     searchInput.value = ''; searchQuery = ''; renderTodos(); searchInput.blur();
                 }
             }
-            // Ctrl/Cmd+F — focus search
-            if ((e.ctrlKey || e.metaKey) && e.key === 'f') { e.preventDefault(); searchInput.focus(); }
+            // Ctrl/Cmd+F — focus search (현재 뷰에 맞는 검색창)
+            if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+                e.preventDefault();
+                if (currentView === 'memo') {
+                    const ms = document.getElementById('memoSearchInput');
+                    if (ms) ms.focus();
+                } else {
+                    searchInput.focus();
+                }
+            }
 
             // Enter (not in an input/textarea/modal) — focus new row
             if (e.key === 'Enter' && currentView === 'todo') {
@@ -1575,6 +1604,8 @@
 
     function bindBugInputEvents() {
         document.querySelectorAll('.bug-text-input').forEach(inp => {
+            inp.addEventListener('input', () => autoReplace(inp));
+            inp.addEventListener('paste', () => setTimeout(() => autoReplaceAll(inp), 0));
             inp.addEventListener('blur', () => {
                 const s = inp.dataset.section;
                 const id = inp.dataset.id;
@@ -1597,7 +1628,11 @@
 
     function initBugEvents() {
         bugAddHome.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); addBug('home', bugAddHome.value); bugAddHome.value = ''; } });
+        bugAddHome.addEventListener('input', () => autoReplace(bugAddHome));
+        bugAddHome.addEventListener('paste', () => setTimeout(() => autoReplaceAll(bugAddHome), 0));
         bugAddTest.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); addBug('test', bugAddTest.value); bugAddTest.value = ''; } });
+        bugAddTest.addEventListener('input', () => autoReplace(bugAddTest));
+        bugAddTest.addEventListener('paste', () => setTimeout(() => autoReplaceAll(bugAddTest), 0));
         navBugTracker.addEventListener('click', () => { switchView(currentView === 'bugs' ? 'home' : 'bugs'); });
         bugMenuToggle.addEventListener('click', () => { sidebar.classList.toggle('open'); toggleOverlay(sidebar.classList.contains('open')); });
     }
@@ -1889,6 +1924,7 @@
             autoReplace(memoEditorTitle);
             scheduleMemoAutoSave();
         });
+        memoEditorTitle.addEventListener('paste', () => setTimeout(() => { autoReplaceAll(memoEditorTitle); scheduleMemoAutoSave(); }, 0));
         memoEditorTitle.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') { e.preventDefault(); memoEditorBody.focus(); }
         });
@@ -1897,6 +1933,7 @@
             autoReplace(memoEditorBody);
             scheduleMemoAutoSave();
         });
+        memoEditorBody.addEventListener('paste', () => setTimeout(() => { autoReplaceAll(memoEditorBody); scheduleMemoAutoSave(); }, 0));
 
         // 색상 선택 — 즉시 저장
         memoEditorColors.querySelectorAll('.memo-color-btn').forEach(btn => {
