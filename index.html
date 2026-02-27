@@ -238,7 +238,7 @@
                     <div class="modal-body">
                         <div class="form-group">
                             <label>제목</label>
-                            <input type="text" id="memoTitleInput" placeholder="메모 제목을 입력하세요..." maxlength="100">
+                            <input type="text" id="memoTitleInput" placeholder="메모 제목을 입력하세요..." >
                         </div>
                         <div class="form-row">
                             <div class="form-group">
@@ -263,7 +263,7 @@
                         </div>
                         <div class="form-group memo-content-group">
                             <label>내용</label>
-                            <textarea id="memoContentInput" placeholder="메모 내용을 입력하세요..." rows="10" maxlength="5000"></textarea>
+                            <textarea id="memoContentInput" placeholder="메모 내용을 입력하세요..." rows="10" ></textarea>
                         </div>
                     </div>
                     <div class="modal-footer">
@@ -321,16 +321,31 @@
                         </div>
                     </div>
 
-                    <!-- 날짜별 할일 패널 -->
-                    <div class="day-panel" id="dayPanel">
-                        <div class="day-panel-header">
-                            <h3 id="dayPanelTitle">날짜를 선택하세요</h3>
-                            <span class="day-panel-count" id="dayPanelCount"></span>
+                    <!-- 오른쪽 패널 -->
+                    <div class="home-right-panel">
+                        <!-- 날짜별 할일 패널 -->
+                        <div class="day-panel" id="dayPanel">
+                            <div class="day-panel-header">
+                                <h3 id="dayPanelTitle">날짜를 선택하세요</h3>
+                                <span class="day-panel-count" id="dayPanelCount"></span>
+                            </div>
+                            <div class="day-panel-list" id="dayPanelList">
+                                <div class="day-panel-empty">
+                                    <i class="fas fa-calendar-day"></i>
+                                    <p>캘린더에서 날짜를 클릭하세요</p>
+                                </div>
+                            </div>
                         </div>
-                        <div class="day-panel-list" id="dayPanelList">
-                            <div class="day-panel-empty">
-                                <i class="fas fa-calendar-day"></i>
-                                <p>캘린더에서 날짜를 클릭하세요</p>
+
+                        <!-- 최근 메모 카드 -->
+                        <div class="home-memo-section" id="homeMemoSection">
+                            <div class="home-memo-header">
+                                <h3><i class="fas fa-note-sticky"></i> 최근 메모</h3>
+                                <button class="home-memo-more" id="homeMemoMore">전체보기 <i class="fas fa-chevron-right"></i></button>
+                            </div>
+                            <div class="home-memo-grid" id="homeMemoGrid"></div>
+                            <div class="home-memo-empty" id="homeMemoEmpty">
+                                <p><i class="fas fa-note-sticky"></i> 메모가 없습니다. 메모 탭에서 추가하세요.</p>
                             </div>
                         </div>
                     </div>
