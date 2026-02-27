@@ -1863,6 +1863,16 @@ body {
     box-shadow: 0 0 0 2px #f97316;
 }
 
+/* input/textarea 내 매칭 표시 */
+.find-field-match {
+    box-shadow: 0 0 0 2px #fde047 !important;
+    background: #fefce8 !important;
+}
+.find-field-current {
+    box-shadow: 0 0 0 2px #f97316 !important;
+    background: #fff7ed !important;
+}
+
 @media (max-width: 768px) {
     .find-bar { right: 8px; left: 8px; }
     .find-bar input { width: 100%; }
