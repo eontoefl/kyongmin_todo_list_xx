@@ -776,6 +776,7 @@
             if (cursorPos === 0 && newText.length > 0) {
                 // 커서가 맨 앞 → 현재 항목 "위에" 빈 행 생성
                 const newTodo = createTodo('', todo.parentId);
+                newTodo.dueDate = todo.dueDate; // 마감일 상속
                 const currentIdx = manualOrder.indexOf(id);
                 const newIdx = manualOrder.indexOf(newTodo.id);
                 manualOrder.splice(newIdx, 1);
@@ -785,6 +786,7 @@
             } else {
                 // 커서가 중간/끝 → 현재 항목 "아래에" 새 행 생성
                 const newTodo = createTodo('', todo.parentId);
+                newTodo.dueDate = todo.dueDate; // 마감일 상속
                 const currentIdx = manualOrder.indexOf(id);
                 const descendants = getDescendantIds(id);
                 let insertAfterIdx = currentIdx;
