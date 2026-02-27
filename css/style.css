@@ -654,10 +654,13 @@ body {
 
 .todo-row.is-child {
     margin-left: 24px;
+    border-left: 2px solid var(--gray-100);
+    border-radius: 0 var(--radius-xs) var(--radius-xs) 0;
 }
 
 .todo-row.is-child:hover {
     background: var(--c-pale);
+    border-left-color: var(--c-pink);
 }
 
 /* Row meta tags */
