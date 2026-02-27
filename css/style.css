@@ -1817,6 +1817,58 @@ body {
 .done-item-cat.health { background: var(--c-peach); color: #b45a3c; }
 .done-item-cat.shopping { background: var(--c-cream); color: #a0744e; }
 
+/* ===== Find Bar (Ctrl+F) ===== */
+.find-bar {
+    position: fixed; top: -60px; right: 24px; z-index: 10000;
+    transition: top 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.find-bar.open { top: 12px; }
+.find-bar-inner {
+    display: flex; align-items: center; gap: 6px;
+    background: var(--surface);
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-md);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.06);
+    padding: 6px 8px 6px 14px;
+}
+.find-bar input {
+    border: none; outline: none; background: none;
+    font-size: 14px; color: var(--text); font-family: inherit;
+    width: 220px; padding: 6px 0;
+}
+.find-bar input::placeholder { color: var(--gray-300); }
+.find-bar-count {
+    font-size: 12px; color: var(--gray-400); font-weight: 500;
+    white-space: nowrap; min-width: 48px; text-align: center;
+}
+.find-bar-count.no-match { color: #ef4444; }
+.find-bar-btn {
+    width: 30px; height: 30px; border-radius: var(--radius-xs);
+    border: none; background: none; color: var(--gray-400);
+    font-size: 12px; cursor: pointer; display: flex;
+    align-items: center; justify-content: center;
+    transition: var(--transition);
+}
+.find-bar-btn:hover { background: var(--gray-50); color: var(--gray-600); }
+.find-bar-close:hover { color: #ef4444; }
+
+/* Find highlight */
+.find-highlight {
+    background: #fef08a; color: inherit;
+    border-radius: 2px; padding: 0 1px;
+    box-shadow: 0 0 0 1px #fde047;
+}
+.find-highlight.current {
+    background: #fb923c; color: #fff;
+    box-shadow: 0 0 0 2px #f97316;
+}
+
+@media (max-width: 768px) {
+    .find-bar { right: 8px; left: 8px; }
+    .find-bar input { width: 100%; }
+    .find-bar-inner { padding: 4px 6px 4px 12px; }
+}
+
 /* ===== Confetti ===== */
 .confetti-container {
     position: fixed; inset: 0;
