@@ -236,8 +236,38 @@
                 ch.forEach(addManual);
             }
             topLevel.forEach(addManual);
+        } else if (currentSort === 'dueDate') {
+            // 마감일순: 같은 마감일 그룹 내에서는 manualOrder 적용
+            const orderMap = {}; manualOrder.forEach((id,i) => orderMap[id]=i);
+            // 마감일 그룹별로 묶기
+            const groups = {};
+            topLevel.forEach(t => {
+                const key = t.dueDate || '__none__';
+                if (!groups[key]) groups[key] = [];
+                groups[key].push(t);
+            });
+            // 각 그룹 내에서 manualOrder 정렬
+            Object.values(groups).forEach(g => {
+                g.sort((a,b) => (orderMap[a.id]??9999) - (orderMap[b.id]??9999));
+            });
+            // 마감일 순서대로 그룹 나열
+            const sortedKeys = Object.keys(groups).sort((a,b) => {
+                if (a === '__none__') return 1;
+                if (b === '__none__') return -1;
+                return a.localeCompare(b);
+            });
+            const added = new Set();
+            function addTree(todo) {
+                if (added.has(todo.id)) return;
+                added.add(todo.id);
+                result.push(todo);
+                const ch = filteredTodos.filter(t => t.parentId === todo.id);
+                ch.sort((a2,b2) => (orderMap[a2.id]??9999) - (orderMap[b2.id]??9999));
+                ch.forEach(addTree);
+            }
+            sortedKeys.forEach(key => groups[key].forEach(addTree));
         } else {
-            // filteredTodos 순서를 그대로 유지하면서 부모 바로 뒤에 자식 삽입
+            // 기타 정렬: filteredTodos 순서 유지, 부모 뒤에 자식 삽입
             const added = new Set();
             function addTree(todo) {
                 if (added.has(todo.id)) return;
@@ -523,7 +553,7 @@
     function buildTodoRowHTML(todo) {
         const dueText = formatDate(todo.dueDate);
         const dueStatus = getDueStatus(todo.dueDate);
-        const isDraggable = currentSort === 'manual';
+        const isDraggable = currentSort === 'manual' || currentSort === 'dueDate';
         const hasCat = todo.category && todo.category !== '';
         const depth = getDepth(todo);
         const isChild = depth > 0;
@@ -689,7 +719,7 @@
             todoList.innerHTML = visibleOrdered.map(buildTodoRowHTML).join('') + buildNewRowHTML();
             sc.scrollTop = saved;
             bindAllRowEvents(todoList);
-            if (currentSort === 'manual') initDragAndDrop(todoList);
+            if (currentSort === 'manual' || currentSort === 'dueDate') initDragAndDrop(todoList);
             renderDoneSection();
             restoreFocus();
             return;
@@ -706,7 +736,7 @@
             quickTaskCount.textContent = quickTasks.length;
             quickTaskList.innerHTML = qwc.map(buildTodoRowHTML).join('');
             bindAllRowEvents(quickTaskList);
-            if (currentSort === 'manual') initDragAndDrop(quickTaskList);
+            if (currentSort === 'manual' || currentSort === 'dueDate') initDragAndDrop(quickTaskList);
         } else { quickTaskSection.style.display = 'none'; }
 
         normalSectionHeader.style.display = (qwc.length > 0 && normalTasks.length > 0) ? 'block' : 'none';
@@ -715,7 +745,7 @@
         todoList.innerHTML = normalTasks.map(buildTodoRowHTML).join('') + buildNewRowHTML();
         sc.scrollTop = saved;
         bindAllRowEvents(todoList);
-        if (currentSort === 'manual') initDragAndDrop(todoList);
+        if (currentSort === 'manual' || currentSort === 'dueDate') initDragAndDrop(todoList);
 
         if (animateNewId) {
             const newRow = todoList.querySelector(`.todo-row[data-id="${animateNewId}"]`);
@@ -1224,10 +1254,34 @@
         draggedId = null;
     }
 
+    // 같은 마감일 그룹인지 확인 (dueDate 정렬 시 드래그 제한용)
+    function isSameDueDateGroup(id1, id2) {
+        const t1 = todos.find(t => t.id === id1);
+        const t2 = todos.find(t => t.id === id2);
+        if (!t1 || !t2) return false;
+        // 최상위 부모의 dueDate 기준으로 비교
+        function getRootDueDate(todo) {
+            let cur = todo;
+            while (cur.parentId) {
+                const p = todos.find(x => x.id === cur.parentId);
+                if (!p) break;
+                cur = p;
+            }
+            return cur.dueDate || null;
+        }
+        return getRootDueDate(t1) === getRootDueDate(t2);
+    }
+
     function handleDragOver(e) {
         e.preventDefault();
         e.dataTransfer.dropEffect = 'move';
         if (this.dataset.id === draggedId) return;
+        // 마감일순 정렬에서는 같은 마감일끼리만 드래그 허용
+        if (currentSort === 'dueDate' && !isSameDueDateGroup(draggedId, this.dataset.id)) {
+            this.classList.remove('drag-over-above', 'drag-over-child', 'drag-over-below');
+            e.dataTransfer.dropEffect = 'none';
+            return;
+        }
         const rect = this.getBoundingClientRect(), y = e.clientY - rect.top, h = rect.height;
         const d = parseInt(this.dataset.depth) || 0;
         this.classList.remove('drag-over-above', 'drag-over-child', 'drag-over-below');
@@ -1244,6 +1298,12 @@
         const fromId = draggedId, toId = this.dataset.id;
         if (!fromId || fromId === toId) {
             this.classList.remove('drag-over', 'drag-over-child', 'drag-over-above', 'drag-over-below');
+            return;
+        }
+        // 마감일순 정렬에서 다른 마감일로 드롭 차단
+        if (currentSort === 'dueDate' && !isSameDueDateGroup(fromId, toId)) {
+            this.classList.remove('drag-over', 'drag-over-child', 'drag-over-above', 'drag-over-below');
+            showToast('같은 마감일 내에서만 순서를 변경할 수 있어요', 'info');
             return;
         }
         const rect = this.getBoundingClientRect(), y = e.clientY - rect.top, h = rect.height;
@@ -1286,10 +1346,15 @@
         document.querySelectorAll('.todo-row').forEach(el => el.classList.remove('drag-over', 'drag-over-child', 'drag-over-above', 'drag-over-below'));
         const ti = eb?.closest('.todo-row');
         if (ti && ti.dataset.id !== draggedId) {
-            const r = ti.getBoundingClientRect(), y = t.clientY - r.top, h = r.height, d = parseInt(ti.dataset.depth) || 0;
-            if (y < h * 0.4) ti.classList.add('drag-over-above');
-            else if (y > h * 0.6) ti.classList.add('drag-over-below');
-            else ti.classList.add(d === 0 ? 'drag-over-child' : 'drag-over-below');
+            // 마감일순 정렬에서 다른 마감일이면 인디케이터 표시 안함
+            if (currentSort === 'dueDate' && !isSameDueDateGroup(draggedId, ti.dataset.id)) {
+                // no indicator
+            } else {
+                const r = ti.getBoundingClientRect(), y = t.clientY - r.top, h = r.height, d = parseInt(ti.dataset.depth) || 0;
+                if (y < h * 0.4) ti.classList.add('drag-over-above');
+                else if (y > h * 0.6) ti.classList.add('drag-over-below');
+                else ti.classList.add(d === 0 ? 'drag-over-child' : 'drag-over-below');
+            }
         }
     }
     function handleTouchEnd(e) {
@@ -1300,17 +1365,22 @@
         const t = e.changedTouches[0], eb = document.elementFromPoint(t.clientX, t.clientY), ti = eb?.closest('.todo-row');
         if (ti && ti.dataset.id !== draggedId) {
             const fid = draggedId, tid = ti.dataset.id, r = ti.getBoundingClientRect(), y = t.clientY - r.top, h = r.height, d = parseInt(ti.dataset.depth) || 0;
-            const ft = todos.find(t => t.id === fid);
-            if (y >= h * 0.4 && y <= h * 0.6 && d === 0) {
-                setParent(fid, tid); showToast('서브 할 일로 변경됨', 'info');
+            // 마감일순 정렬에서 다른 마감일로 터치드롭 차단
+            if (currentSort === 'dueDate' && !isSameDueDateGroup(fid, tid)) {
+                showToast('같은 마감일 내에서만 순서를 변경할 수 있어요', 'info');
             } else {
-                const tt = todos.find(t => t.id === tid); if (ft && tt) ft.parentId = tt.parentId;
-                const fi = manualOrder.indexOf(fid); if (fi !== -1) {
-                    manualOrder.splice(fi, 1);
-                    if (y >= h * 0.6) manualOrder.splice(manualOrder.indexOf(tid) + 1, 0, fid);
-                    else manualOrder.splice(manualOrder.indexOf(tid), 0, fid);
+                const ft = todos.find(t => t.id === fid);
+                if (y >= h * 0.4 && y <= h * 0.6 && d === 0) {
+                    setParent(fid, tid); showToast('서브 할 일로 변경됨', 'info');
+                } else {
+                    const tt = todos.find(t => t.id === tid); if (ft && tt) ft.parentId = tt.parentId;
+                    const fi = manualOrder.indexOf(fid); if (fi !== -1) {
+                        manualOrder.splice(fi, 1);
+                        if (y >= h * 0.6) manualOrder.splice(manualOrder.indexOf(tid) + 1, 0, fid);
+                        else manualOrder.splice(manualOrder.indexOf(tid), 0, fid);
+                    }
+                    saveTodos(); renderTodos(); updateStats();
                 }
-                saveTodos(); renderTodos(); updateStats();
             }
         }
         document.querySelectorAll('.todo-row').forEach(el => el.classList.remove('drag-over', 'drag-over-child', 'drag-over-above', 'drag-over-below'));
