@@ -16,6 +16,71 @@
     const SORT_KEY = 'kyongmin_todo_sort';
     const ORDER_KEY = 'kyongmin_todo_order';
 
+    // ==========================================
+    // Supabase 설정
+    // ==========================================
+    const SUPABASE_URL = 'https://ynezxtpwctsvfgpcuijv.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InluZXp4dHB3Y3RzdmZncGN1aWp2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIyNjExOTksImV4cCI6MjA4NzgzNzE5OX0.YsqGVzQL0VwRsPYxhD_oiMhfvCuu_53C9tAPbyu7GWI';
+
+    const sbHeaders = {
+        'apikey': SUPABASE_KEY,
+        'Authorization': `Bearer ${SUPABASE_KEY}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'return=representation'
+    };
+
+    async function sbGet(table) {
+        try {
+            const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}?select=*`, { headers: sbHeaders });
+            if (!r.ok) throw new Error(r.statusText);
+            return await r.json();
+        } catch(e) { console.warn(`Supabase GET ${table} failed:`, e); return null; }
+    }
+
+    async function sbUpsert(table, rows) {
+        if (!rows || rows.length === 0) return;
+        try {
+            const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
+                method: 'POST',
+                headers: { ...sbHeaders, 'Prefer': 'return=representation,resolution=merge-duplicates' },
+                body: JSON.stringify(rows)
+            });
+            if (!r.ok) throw new Error(r.statusText);
+        } catch(e) { console.warn(`Supabase UPSERT ${table} failed:`, e); }
+    }
+
+    async function sbDeleteAll(table) {
+        try {
+            await fetch(`${SUPABASE_URL}/rest/v1/${table}?id=neq.____IMPOSSIBLE____`, {
+                method: 'DELETE', headers: sbHeaders
+            });
+        } catch(e) { console.warn(`Supabase DELETE ${table} failed:`, e); }
+    }
+
+    // todo 객체 → DB 행 변환 (camelCase → snake_case)
+    function todoToRow(t) {
+        return {
+            id: t.id, text: t.text || '', type: t.type || 'todo',
+            completed: !!t.completed, completed_at: t.completedAt || null,
+            category: t.category || '', important: !!t.important,
+            quick_task: !!t.quickTask, due_date: t.dueDate || null,
+            note: t.note || '', parent_id: t.parentId || null,
+            created_at: t.createdAt || null, updated_at: new Date().toISOString()
+        };
+    }
+
+    // DB 행 → todo 객체 변환 (snake_case → camelCase)
+    function rowToTodo(r) {
+        return {
+            id: r.id, text: r.text || '', type: r.type || 'todo',
+            completed: !!r.completed, completedAt: r.completed_at || null,
+            category: r.category || '', important: !!r.important,
+            quickTask: !!r.quick_task, dueDate: r.due_date || null,
+            note: r.note || '', parentId: r.parent_id || null,
+            createdAt: r.created_at || null
+        };
+    }
+
     let todos = [];
     let manualOrder = [];
     let currentFilter = 'all';
@@ -199,21 +264,34 @@
         try {
             localStorage.setItem(STORAGE_KEY, JSON.stringify(todos));
             localStorage.setItem(ORDER_KEY, JSON.stringify(manualOrder));
-        } catch(e) { showToast('저장 중 오류가 발생했습니다.','error'); }
+        } catch(e) {}
+        // Supabase 비동기 저장
+        sbDeleteAll('todos').then(() => {
+            const rows = todos.map(todoToRow);
+            if (rows.length > 0) sbUpsert('todos', rows);
+        });
     }
 
     // 초기 시드 데이터 (최초 실행 시 한 번만 사용)
     const SEED_DATA = [{"id":"mly4tm6j6li6tf4ko","text":"스피킹 인터뷰 나레이션에 사진이 안나옴.","completed":true,"category":"","important":false,"quickTask":false,"dueDate":null,"note":"","parentId":"mly11t2y8hetr37d2","createdAt":"2026-02-22T19:19:49.387Z","completedAt":"2026-02-22T19:49:54.155Z","type":"todo"},{"id":"mly4jh5f8f88dfgpr","text":"오늘자 해당되는 모든사람들 데드라인 하루 연장해주기","completed":false,"category":"","important":false,"quickTask":false,"dueDate":null,"note":"","parentId":null,"createdAt":"2026-02-22T19:11:56.307Z","completedAt":null,"type":"todo"},{"id":"mly4ho4sxorvvubk9","text":"박수인님 세팅하기 (입금완료)","completed":false,"category":"","important":false,"quickTask":false,"dueDate":null,"note":"","parentId":"mly4fr7hzlyqaq0qt","createdAt":"2026-02-22T19:10:32.044Z","completedAt":null,"type":"todo"},{"id":"mly4fr7hzlyqaq0qt","text":"변희성 3/1로 시작일자 이동","completed":false,"category":"","important":false,"quickTask":false,"dueDate":null,"note":"","parentId":null,"createdAt":"2026-02-22T19:09:02.717Z","completedAt":null,"type":"todo"},{"id":"mly4fe1p0eh6z624n","text":"팝업 관리시스템 (DB on/off)","completed":false,"category":"","important":false,"quickTask":false,"dueDate":null,"note":"","parentId":null,"createdAt":"2026-02-22T19:08:45.661Z","completedAt":null,"type":"todo"},{"id":"mly4eztvynxgymxci","text":"학생 오류제보 버튼","completed":false,"category":"","important":false,"quickTask":false,"dueDate":null,"note":"","parentId":null,"createdAt":"2026-02-22T19:08:27.235Z","completedAt":null,"type":"todo"},{"id":"mly4e7cr0ub4viy88","text":"연습풀이 오답노트 정책 결정","completed":false,"category":"","important":false,"quickTask":false,"dueDate":null,"note":"","parentId":null,"createdAt":"2026-02-22T19:07:50.331Z","completedAt":null,"type":"todo"},{"id":"mly141s7l4no0merr","text":"오답노트 패널 플로팅 위치 조정","completed":true,"category":"","important":false,"dueDate":null,"note":"","createdAt":"2026-02-22T17:35:57.703Z","completedAt":"2026-02-22T19:08:01.874Z","quickTask":true,"parentId":null,"type":"todo"},{"id":"mly13rs2t71fgf4bx","text":"해설 화면 1:1 문장 매칭 + (A)(B)(C)(D) 아이콘","completed":false,"category":"","important":false,"dueDate":null,"note":"","createdAt":"2026-02-22T17:35:44.738Z","completedAt":null,"quickTask":false,"parentId":null,"type":"todo"},{"id":"mly13oqagp9uz6cet","text":"실전풀이 1차/2차 채점 자동 저장","completed":false,"category":"","important":false,"dueDate":null,"note":"","createdAt":"2026-02-22T17:35:40.786Z","completedAt":null,"quickTask":false,"parentId":null,"type":"todo"},{"id":"mly13jsq4v55duud2","text":"과제 버튼 뱃지/체크 아이콘 겹침","completed":true,"category":"","important":false,"dueDate":null,"note":"","createdAt":"2026-02-22T17:35:34.395Z","completedAt":"2026-02-22T19:07:09.112Z","quickTask":true,"parentId":null,"type":"todo"},{"id":"mly13goy12ndsd7au","text":"리딩 해설 원문1줄+번역1줄 레이아웃","completed":false,"category":"","important":false,"dueDate":null,"note":"","createdAt":"2026-02-22T17:35:30.370Z","completedAt":null,"quickTask":false,"parentId":null,"type":"todo"},{"id":"mly13d6k0yv6vwt3l","text":"마이페이지 인증률 계산 로직 수정","completed":false,"category":"","important":false,"dueDate":null,"note":"","createdAt":"2026-02-22T17:35:25.820Z","completedAt":null,"quickTask":false,"parentId":null,"type":"todo"},{"id":"mly12ar2w43h7xe5y","text":"오답노트 저장 실패 버그 수정 (마이페이지 포함)","completed":true,"category":"","important":false,"dueDate":null,"note":"","createdAt":"2026-02-22T17:34:36.014Z","completedAt":"2026-02-22T21:20:31.333Z","quickTask":false,"parentId":null,"type":"todo"},{"id":"mly125dsjdx1a4w8l","text":"오디오 겹침 문제 확인","completed":false,"category":"","important":false,"dueDate":null,"note":"","createdAt":"2026-02-22T17:34:29.056Z","completedAt":null,"quickTask":false,"parentId":null,"type":"todo"},{"id":"mly122zs9bnjxnttb","text":"리스닝 해설화면 CSS 긴급 정리","completed":false,"category":"","important":false,"dueDate":null,"note":"","createdAt":"2026-02-22T17:34:25.960Z","completedAt":null,"quickTask":false,"parentId":null,"type":"todo"},{"id":"mly120liaqm62mi78","text":"실전풀이 vs 연습풀이 팝업 구분","completed":false,"category":"","important":false,"dueDate":null,"note":"","createdAt":"2026-02-22T17:34:22.855Z","completedAt":null,"quickTask":false,"parentId":null,"type":"todo"},{"id":"mly11vt0fxgjxcozq","text":"리딩 60% 인증률 버그 수정","completed":false,"category":"","important":false,"dueDate":null,"note":"","createdAt":"2026-02-22T17:34:16.644Z","completedAt":null,"quickTask":false,"parentId":null,"type":"todo"},{"id":"mly11t2y8hetr37d2","text":"내일 스케줄 대응 (리딩2, 리스닝1, 스피킹1 테스트)","completed":false,"category":"","important":false,"dueDate":null,"note":"","createdAt":"2026-02-22T17:34:13.114Z","completedAt":null,"quickTask":false,"parentId":null,"type":"todo"},{"id":"mly24gzq6z7wux9f7","text":"전섹션에 강제리로드 기능 추가","completed":true,"category":"","important":false,"quickTask":false,"dueDate":null,"note":"","parentId":"mly11t2y8hetr37d2","createdAt":"2026-02-22T17:34:13.114Z","completedAt":"2026-02-22T19:12:15.506Z","type":"todo"},{"id":"mly7aky3tjda4e43s","text":"연습풀이 오답노트 정책 결정","completed":false,"category":"","important":false,"quickTask":false,"dueDate":null,"note":"","parentId":null,"type":"todo","createdAt":"2026-02-22T20:29:00.171Z","completedAt":null}];
 
-    function loadTodos() {
+    async function loadTodos() {
         try {
-            const data = localStorage.getItem(STORAGE_KEY);
-            todos = data ? JSON.parse(data) : SEED_DATA.map(t => ({...t}));
+            // Supabase에서 먼저 시도
+            const rows = await sbGet('todos');
+            if (rows && rows.length > 0) {
+                todos = rows.map(rowToTodo);
+                console.log(`✅ Supabase에서 할일 ${todos.length}개 로드`);
+            } else {
+                // Supabase 비었으면 LocalStorage fallback
+                const data = localStorage.getItem(STORAGE_KEY);
+                todos = data ? JSON.parse(data) : [];
+                if (todos.length > 0) console.log(`📦 LocalStorage에서 할일 ${todos.length}개 로드`);
+            }
             todos.forEach(t => {
                 if (typeof t.quickTask === 'undefined') t.quickTask = false;
                 if (typeof t.parentId === 'undefined') t.parentId = null;
                 if (typeof t.type === 'undefined') t.type = 'todo';
-                // Legacy subtask migration
                 if (Array.isArray(t.subtasks) && t.subtasks.length > 0) {
                     for (const sub of t.subtasks) {
                         const nt = { id:sub.id||generateId(), text:sub.text, completed:!!sub.done,
@@ -227,7 +305,7 @@
             const order = localStorage.getItem(ORDER_KEY);
             manualOrder = order ? JSON.parse(order) : todos.map(t=>t.id);
             syncOrder();
-        } catch(e) { todos=[]; manualOrder=[]; }
+        } catch(e) { todos=[]; manualOrder=[]; console.warn('loadTodos 실패:', e); }
     }
 
     function syncOrder() {
@@ -1566,8 +1644,36 @@
     const bugTestDone = $('#bugTestDone'), bugTestTotal = $('#bugTestTotal'), bugTestFill = $('#bugTestFill');
     const badgeBugs = $('#badgeBugs'), bugMenuToggle = $('#bugMenuToggle');
 
-    function loadBugs() { try { const d = localStorage.getItem(BUG_STORAGE_KEY); if (d) bugs = JSON.parse(d); if (!bugs.home) bugs.home = []; if (!bugs.test) bugs.test = []; } catch(e) { bugs = { home: [], test: [] }; } }
-    function saveBugs() { try { localStorage.setItem(BUG_STORAGE_KEY, JSON.stringify(bugs)); } catch(e) { showToast('저장 중 오류', 'error'); } }
+    async function loadBugs() {
+        try {
+            const rows = await sbGet('bugs');
+            if (rows && rows.length > 0) {
+                bugs = { home: [], test: [] };
+                rows.forEach(r => {
+                    const item = { id: r.id, text: r.text || '', done: !!r.done };
+                    if (r.section === 'home') bugs.home.push(item);
+                    else if (r.section === 'test') bugs.test.push(item);
+                });
+                console.log(`✅ Supabase에서 버그 ${rows.length}개 로드`);
+            } else {
+                const d = localStorage.getItem(BUG_STORAGE_KEY);
+                if (d) bugs = JSON.parse(d);
+                if (!bugs.home) bugs.home = [];
+                if (!bugs.test) bugs.test = [];
+            }
+        } catch(e) { bugs = { home: [], test: [] }; }
+    }
+
+    function saveBugs() {
+        try { localStorage.setItem(BUG_STORAGE_KEY, JSON.stringify(bugs)); } catch(e) {}
+        // Supabase 비동기 저장
+        sbDeleteAll('bugs').then(() => {
+            const rows = [];
+            bugs.home.forEach(b => rows.push({ section: 'home', id: b.id, text: b.text || '', done: !!b.done }));
+            bugs.test.forEach(b => rows.push({ section: 'test', id: b.id, text: b.text || '', done: !!b.done }));
+            if (rows.length > 0) sbUpsert('bugs', rows);
+        });
+    }
 
     function addBug(s, text) { text = text.trim(); if (!text) return; bugs[s].push({ id: generateId(), text, done: false, createdAt: new Date().toISOString() }); saveBugs(); renderBugs(); }
     function toggleBug(s, id) { const b = bugs[s].find(b => b.id === id); if (!b) return; b.done = !b.done; saveBugs(); renderBugs(); if (b.done) showToast('해결 완료!', 'success'); }
@@ -1660,17 +1766,35 @@
     const memoConfirmCancel = $('#memoConfirmCancel');
     const badgeMemos = $('#badgeMemos');
 
-    function loadMemos() {
+    async function loadMemos() {
         try {
-            const data = localStorage.getItem(MEMO_STORAGE_KEY);
-            memos = data ? JSON.parse(data) : [];
+            const rows = await sbGet('memos');
+            if (rows && rows.length > 0) {
+                memos = rows.map(r => ({
+                    id: r.id, title: r.title || '', content: r.content || '',
+                    color: r.color || 'default', pinned: !!r.pinned,
+                    createdAt: r.created_at || '', updatedAt: r.updated_at || ''
+                }));
+                console.log(`✅ Supabase에서 메모 ${memos.length}개 로드`);
+            } else {
+                const data = localStorage.getItem(MEMO_STORAGE_KEY);
+                memos = data ? JSON.parse(data) : [];
+                if (memos.length > 0) console.log(`📦 LocalStorage에서 메모 ${memos.length}개 로드`);
+            }
         } catch(e) { memos = []; }
     }
 
     function saveMemos() {
-        try {
-            localStorage.setItem(MEMO_STORAGE_KEY, JSON.stringify(memos));
-        } catch(e) { showToast('메모 저장 중 오류가 발생했습니다.', 'error'); }
+        try { localStorage.setItem(MEMO_STORAGE_KEY, JSON.stringify(memos)); } catch(e) {}
+        // Supabase 비동기 저장
+        sbDeleteAll('memos').then(() => {
+            const rows = memos.map(m => ({
+                id: m.id, title: m.title || '', content: m.content || '',
+                color: m.color || 'default', pinned: !!m.pinned,
+                created_at: m.createdAt || '', updated_at: m.updatedAt || ''
+            }));
+            if (rows.length > 0) sbUpsert('memos', rows);
+        });
     }
 
     function createMemo(title, content, color, pinned) {
@@ -2513,8 +2637,8 @@
     // 미완료 할 일 자동 이월 (자정 기준)
     // migrateOverdueTodos 제거 — getTodoDateKey에서 동적 처리
 
-    function init() {
-        loadTodos(); loadSort(); loadBugs(); loadMemos();
+    async function init() {
+        await loadTodos(); loadSort(); await loadBugs(); await loadMemos();
         updateHeaderDate();
         renderTodos(); updateStats(); renderBugs(); renderMemos();
         initEventListeners(); initBugEvents(); initMemoEvents(); initCalendar(); initDoneSection(); initMobileTabbar();
