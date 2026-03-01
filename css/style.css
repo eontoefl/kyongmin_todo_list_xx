@@ -1873,6 +1873,86 @@ body {
     background: #fff7ed !important;
 }
 
+/* ==========================================
+   Context Menu (우클릭 메뉴)
+   ========================================== */
+.ctx-menu {
+    position: fixed;
+    z-index: 10000;
+    min-width: 180px;
+    background: #fff;
+    border: 1px solid var(--gray-100);
+    border-radius: 10px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.06);
+    padding: 4px;
+    display: none;
+    animation: ctxFadeIn 0.12s ease;
+}
+.ctx-menu.show { display: block; }
+@keyframes ctxFadeIn {
+    from { opacity: 0; transform: scale(0.95) translateY(-4px); }
+    to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+.ctx-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 8px 12px;
+    border: none;
+    background: none;
+    font-size: 13px;
+    color: var(--gray-600);
+    cursor: pointer;
+    border-radius: 6px;
+    transition: background 0.1s, color 0.1s;
+    text-align: left;
+    white-space: nowrap;
+}
+.ctx-item i { width: 16px; text-align: center; font-size: 12px; color: var(--gray-400); }
+.ctx-item:hover { background: var(--gray-50); color: var(--gray-800); }
+.ctx-item:hover i { color: var(--gray-600); }
+.ctx-item.ctx-danger { color: #ef4444; }
+.ctx-item.ctx-danger i { color: #ef4444; }
+.ctx-item.ctx-danger:hover { background: #fef2f2; color: #dc2626; }
+.ctx-item.ctx-danger:hover i { color: #dc2626; }
+.ctx-divider { height: 1px; background: var(--gray-100); margin: 3px 4px; }
+
+/* 마감일 미니 팝업 */
+.ctx-datepicker {
+    position: fixed;
+    z-index: 10001;
+    background: #fff;
+    border: 1px solid var(--gray-100);
+    border-radius: 10px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+    padding: 12px;
+    display: none;
+    animation: ctxFadeIn 0.12s ease;
+}
+.ctx-datepicker.show { display: block; }
+.ctx-datepicker input[type="date"] {
+    width: 100%;
+    padding: 6px 8px;
+    border: 1px solid var(--gray-200);
+    border-radius: 6px;
+    font-size: 13px;
+    color: var(--gray-700);
+    outline: none;
+}
+.ctx-datepicker input[type="date"]:focus { border-color: var(--c-pink); }
+.ctx-datepicker-btns {
+    display: flex; gap: 6px; margin-top: 8px; justify-content: flex-end;
+}
+.ctx-dp-btn {
+    padding: 4px 10px; border: 1px solid var(--gray-200); background: #fff;
+    border-radius: 6px; font-size: 12px; color: var(--gray-500); cursor: pointer;
+    transition: var(--transition);
+}
+.ctx-dp-btn:hover { background: var(--gray-50); }
+.ctx-dp-btn.primary { background: var(--c-pink); color: #fff; border-color: var(--c-pink); }
+.ctx-dp-btn.primary:hover { background: var(--accent-text); }
+
 @media (max-width: 768px) {
     .find-bar { right: 8px; left: 8px; }
     .find-bar input { width: 100%; }
