@@ -557,6 +557,28 @@
     <!-- 토스트 알림 -->
     <div class="toast-container" id="toastContainer"></div>
 
+    <!-- 우클릭 컨텍스트 메뉴 -->
+    <div class="ctx-menu" id="ctxMenu">
+        <button class="ctx-item" data-action="postpone"><i class="fas fa-calendar-plus"></i> 하루 미루기</button>
+        <button class="ctx-item" data-action="setDueDate"><i class="fas fa-calendar-alt"></i> 마감일 설정</button>
+        <div class="ctx-divider"></div>
+        <button class="ctx-item" data-action="toggleQuick"><i class="fas fa-bolt"></i> <span id="ctxQuickLabel">빠른 할일 설정</span></button>
+        <button class="ctx-item" data-action="addNote"><i class="fas fa-sticky-note"></i> <span id="ctxNoteLabel">메모 추가</span></button>
+        <div class="ctx-divider"></div>
+        <button class="ctx-item" data-action="makeChild"><i class="fas fa-indent"></i> <span id="ctxChildLabel">서브태스크로 변환</span></button>
+        <div class="ctx-divider"></div>
+        <button class="ctx-item ctx-danger" data-action="deleteTodo"><i class="fas fa-trash"></i> 삭제</button>
+    </div>
+
+    <!-- 마감일 선택 팝업 (컨텍스트 메뉴용) -->
+    <div class="ctx-datepicker" id="ctxDatepicker">
+        <input type="date" id="ctxDateInput">
+        <div class="ctx-datepicker-btns">
+            <button class="ctx-dp-btn" id="ctxDateClear">초기화</button>
+            <button class="ctx-dp-btn primary" id="ctxDateConfirm">확인</button>
+        </div>
+    </div>
+
     <!-- 페이지 내 검색 오버레이 -->
     <div class="find-bar" id="findBar">
         <div class="find-bar-inner">
