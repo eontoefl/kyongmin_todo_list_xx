@@ -2574,6 +2574,194 @@
     if (findClose) findClose.addEventListener('click', closeFindBar);
 
     // ==========================================
+    // Context Menu (우클릭 메뉴)
+    // ==========================================
+    const ctxMenu = $('#ctxMenu');
+    const ctxDatepicker = $('#ctxDatepicker');
+    const ctxDateInput = $('#ctxDateInput');
+    let ctxTargetId = null; // 우클릭 대상 todo ID
+
+    function showCtxMenu(e, todoId) {
+        e.preventDefault();
+        const todo = todos.find(t => t.id === todoId);
+        if (!todo) return;
+        ctxTargetId = todoId;
+
+        // 마감일 없으면 "하루 미루기" 숨김
+        const postponeBtn = ctxMenu.querySelector('[data-action="postpone"]');
+        postponeBtn.style.display = todo.dueDate ? '' : 'none';
+
+        // 빠른 할일 라벨 토글
+        const quickLabel = $('#ctxQuickLabel');
+        quickLabel.textContent = todo.quickTask ? '빠른 할일 해제' : '빠른 할일 설정';
+
+        // 메모 라벨 토글
+        const noteLabel = $('#ctxNoteLabel');
+        noteLabel.textContent = todo.note ? '메모 수정' : '메모 추가';
+
+        // 서브태스크/승격 라벨 토글
+        const childLabel = $('#ctxChildLabel');
+        const childBtn = ctxMenu.querySelector('[data-action="makeChild"]');
+        const childIcon = childBtn.querySelector('i');
+        if (todo.parentId) {
+            childLabel.textContent = '최상위로 승격';
+            childIcon.className = 'fas fa-outdent';
+        } else {
+            childLabel.textContent = '서브태스크로 변환';
+            childIcon.className = 'fas fa-indent';
+        }
+
+        // 위치 계산
+        ctxMenu.classList.add('show');
+        const mw = ctxMenu.offsetWidth, mh = ctxMenu.offsetHeight;
+        let x = e.clientX, y = e.clientY;
+        if (x + mw > window.innerWidth) x = window.innerWidth - mw - 8;
+        if (y + mh > window.innerHeight) y = window.innerHeight - mh - 8;
+        if (x < 4) x = 4;
+        if (y < 4) y = 4;
+        ctxMenu.style.left = x + 'px';
+        ctxMenu.style.top = y + 'px';
+    }
+
+    function hideCtxMenu() {
+        ctxMenu.classList.remove('show');
+        ctxDatepicker.classList.remove('show');
+        ctxTargetId = null;
+    }
+
+    // 컨텍스트 메뉴 항목 클릭
+    ctxMenu.addEventListener('click', function(e) {
+        const btn = e.target.closest('.ctx-item');
+        if (!btn || !ctxTargetId) return;
+        const action = btn.dataset.action;
+        const todo = todos.find(t => t.id === ctxTargetId);
+        if (!todo) { hideCtxMenu(); return; }
+
+        switch (action) {
+            case 'postpone': {
+                if (todo.dueDate) {
+                    const d = new Date(todo.dueDate);
+                    d.setDate(d.getDate() + 1);
+                    todo.dueDate = d.toISOString().split('T')[0];
+                    // 서브태스크도 같이 미루기
+                    const children = todos.filter(t => t.parentId === todo.id);
+                    children.forEach(c => { if (c.dueDate) { const cd = new Date(c.dueDate); cd.setDate(cd.getDate() + 1); c.dueDate = cd.toISOString().split('T')[0]; } });
+                    saveTodos(); renderTodos(); updateStats();
+                    showToast(`마감일 → ${formatDate(todo.dueDate)}`, 'info');
+                }
+                hideCtxMenu();
+                break;
+            }
+            case 'setDueDate': {
+                ctxDateInput.value = todo.dueDate || '';
+                // 날짜 팝업 위치 = 컨텍스트 메뉴 옆
+                const rect = ctxMenu.getBoundingClientRect();
+                ctxDatepicker.classList.add('show');
+                let dx = rect.right + 4, dy = rect.top;
+                if (dx + 200 > window.innerWidth) dx = rect.left - 210;
+                if (dy + 120 > window.innerHeight) dy = window.innerHeight - 130;
+                ctxDatepicker.style.left = dx + 'px';
+                ctxDatepicker.style.top = dy + 'px';
+                ctxDateInput.focus();
+                ctxMenu.classList.remove('show'); // 메인 메뉴 닫기
+                return; // hideCtxMenu 호출 안 함
+            }
+            case 'toggleQuick': {
+                todo.quickTask = !todo.quickTask;
+                saveTodos(); renderTodos(); updateStats();
+                showToast(todo.quickTask ? '⚡ 빠른 할일 설정됨' : '빠른 할일 해제됨', 'info');
+                hideCtxMenu();
+                break;
+            }
+            case 'addNote': {
+                hideCtxMenu();
+                openEditModal(todo.id);
+                // 약간 딜레이 후 메모 필드에 포커스
+                setTimeout(() => {
+                    const noteField = document.querySelector('#editNote, .edit-note');
+                    if (noteField) noteField.focus();
+                }, 200);
+                break;
+            }
+            case 'makeChild': {
+                if (todo.parentId) {
+                    promoteToTopLevel(todo.id);
+                } else {
+                    // 바로 위 항목의 자식으로 변환
+                    const ordered = buildOrderedList(getFilteredTodos().filter(t => !t.completed));
+                    const idx = ordered.findIndex(t => t.id === todo.id);
+                    // 위쪽에서 가장 가까운 최상위 항목 찾기
+                    let parentCandidate = null;
+                    for (let i = idx - 1; i >= 0; i--) {
+                        if (!ordered[i].parentId) { parentCandidate = ordered[i]; break; }
+                    }
+                    if (parentCandidate) {
+                        setParent(todo.id, parentCandidate.id);
+                        showToast('서브태스크로 변환됨', 'info');
+                    } else {
+                        showToast('위에 부모가 될 항목이 없어요', 'info');
+                    }
+                }
+                hideCtxMenu();
+                break;
+            }
+            case 'deleteTodo': {
+                hideCtxMenu();
+                deleteTodo(todo.id);
+                break;
+            }
+        }
+    });
+
+    // 날짜 선택 확인
+    $('#ctxDateConfirm').addEventListener('click', function() {
+        if (!ctxTargetId) return;
+        const todo = todos.find(t => t.id === ctxTargetId);
+        if (todo) {
+            const newDate = ctxDateInput.value || null;
+            todo.dueDate = newDate;
+            saveTodos(); renderTodos(); updateStats();
+            showToast(newDate ? `마감일 → ${formatDate(newDate)}` : '마감일 제거됨', 'info');
+        }
+        hideCtxMenu();
+    });
+
+    // 날짜 초기화
+    $('#ctxDateClear').addEventListener('click', function() {
+        if (!ctxTargetId) return;
+        const todo = todos.find(t => t.id === ctxTargetId);
+        if (todo) {
+            todo.dueDate = null;
+            saveTodos(); renderTodos(); updateStats();
+            showToast('마감일 제거됨', 'info');
+        }
+        hideCtxMenu();
+    });
+
+    // 바깥 클릭 시 메뉴 닫기
+    document.addEventListener('click', function(e) {
+        if (!ctxMenu.contains(e.target) && !ctxDatepicker.contains(e.target)) {
+            hideCtxMenu();
+        }
+    });
+    // ESC 로 닫기
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') hideCtxMenu();
+    });
+
+    // todo-row 에 우클릭 이벤트 바인딩 (이벤트 위임)
+    document.addEventListener('contextmenu', function(e) {
+        const row = e.target.closest('.todo-row[data-id]');
+        if (row && row.dataset.id) {
+            // 완료된 할일이나 텍스트 블록은 제외
+            const todo = todos.find(t => t.id === row.dataset.id);
+            if (todo && !todo.completed && todo.type !== 'text') {
+                showCtxMenu(e, row.dataset.id);
+            }
+        }
+    });
+
+    // ==========================================
     // Confetti Animation
     // ==========================================
     let confettiTimeout = null;
