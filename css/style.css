@@ -1,25 +1,25 @@
 /* ==========================================
    KYONGMIN's Todo List — Custom Palette
    ==========================================
-   #EADBDD  —  muted mauve
-   #FCD5CE  —  peach blush
-   #FFCAD4  —  soft pink
-   #FADDE1  —  light rose
-   #FFF1F5  —  pale pink
-   #F6EEE9  —  warm cream
+   #C5D5E4  —  muted steel blue
+   #BDDCF5  —  light sky
+   #A8D4F5  —  soft sky blue
+   #C9E2F5  —  light azure
+   #EDF5FF  —  pale sky
+   #E9F0F6  —  warm ice
    ========================================== */
 
 :root {
-    --c-mauve: #EADBDD;
-    --c-peach: #FCD5CE;
-    --c-pink: #FFCAD4;
-    --c-rose: #FADDE1;
-    --c-pale: #FFF1F5;
-    --c-cream: #F6EEE9;
+    --c-mauve: #C5D5E4;
+    --c-peach: #BDDCF5;
+    --c-pink: #A8D4F5;
+    --c-rose: #C9E2F5;
+    --c-pale: #EDF5FF;
+    --c-cream: #E9F0F6;
 
-    --accent: #e8a0b4;
-    --accent-hover: #d98aa1;
-    --accent-text: #9e5c6e;
+    --accent: #7AB8E0;
+    --accent-hover: #5BA3D1;
+    --accent-text: #3D7EAA;
 
     --gray-50: #fafafa;
     --gray-100: #f5f5f5;
